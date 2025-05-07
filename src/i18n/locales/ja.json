@@ -1,0 +1,124 @@
+{
+  "common": {
+    "startPractice": "今すぐ練習を始める",
+    "endInterview": "面接を終了",
+    "viewFeedback": "フィードバックを確認",
+    "send": "送信",
+    "voice": "音声入力",
+    "keyboard": "キーボード入力",
+    "recording": "録音中...",
+    "speakAgain": "もう一度話してください",
+    "typeAnswer": "回答を入力してください...",
+    "cancel": "キャンセル"
+  },
+  "settings": {
+    "title": "面接設定",
+    "mode": {
+      "label": "質問タイプを選択",
+      "general": "一般",
+      "personalized": "パーソナライズ",
+      "generalDescription": "一般的に聞かれる質問をベースに面接を行います"
+    },
+    "background": {
+      "label": "経歴",
+      "placeholder": "これまでの職歴や経験について入力してください"
+    },
+    "position": {
+      "label": "応募求人",
+      "placeholder": "応募する職種や業界について入力してください"
+    },
+    "startButton": "面接を開始"
+  },
+  "dialog": {
+    "confirm": {
+      "title": "面接を終了しますか？",
+      "message": "面接を終了してよろしいですか？",
+      "cancel": "キャンセル",
+      "end": "終了する"
+    },
+    "complete": {
+      "title": "面接完了",
+      "message": "面接セッションが終了しました。フィードバックを確認しますか？"
+    }
+  },
+  "feedback": {
+    "title": "評価結果",
+    "subtitle": "面接の評価結果とパーソナライズされたフィードバックを確認できます。",
+    "pricingNotice": "以下は現状想定しているプランと機能一覧です。プラン毎の価格や追加機能は今後決定予定になります。",
+    "performance": {
+      "english": "英語力",
+      "interview": "面接対応力",
+      "vocabulary": {
+        "title": "語彙力",
+        "description": "業界用語や文脈に適した単語の選択・使用の正確性"
+      },
+      "grammar": {
+        "title": "文法精度",
+        "description": "時制、主語-動詞の一致、前置詞・冠詞の使用における正確性"
+      },
+      "structure": {
+        "title": "論理構成",
+        "description": "STAR/CAR形式に基づく回答の論理的な組み立て"
+      },
+      "logic": {
+        "title": "数値実証",
+        "description": "達成した成果の具体的な数値・パーセンテージでの提示"
+      }
+    },
+    "practiceAgain": "もう一度練習する",
+    "tabs": {
+      "summary": "サマリー",
+      "details": "詳細"
+    },
+    "strengths": "強み",
+    "improvements": "改善点",
+    "actionItems": "アクション",
+    "question": "質問 {{number}}",
+    "yourAnswer": "あなたの回答",
+    "englishFeedback": "英語力の評価",
+    "interviewFeedback": "面接対応の評価",
+    "idealAnswer": "模範回答",
+    "noData": "フィードバックデータがありません",
+    "viewPricingPlans": "料金プランを見る",
+    "premiumFeatureNotice": "有料プランでは全てのフィードバックが確認できます",
+    "extendedInterviewNotice": "有料プランでは、3分以上の面接が可能"
+  },
+  "home": {
+    "hero": {
+      "title": "AIで英語面接力を磨く",
+      "subtitle": "AIを活用した英語面接練習プラットフォーム。いつでも、何度でも練習して、あなたの英語力と面接スキルを向上させましょう。"
+    },
+    "features": {
+      "title": "主な特徴",
+      "subtitle": "AIによる総合的な評価とフィードバックで、効果的な面接対策を実現",
+      "anytime": {
+        "title": "いつでも・何度でも",
+        "description": "24時間365日、好きな時に練習可能。回数制限なしで、納得いくまで繰り返し練習できます"
+      },
+      "evaluation": {
+        "title": "英語力 × 面接力",
+        "description": "発音・文法・語彙力に加え、回答の論理性や説得力まで、AIが総合的に評価。具体的な改善点を提示"
+      },
+      "personalized": {
+        "title": "パーソナライズ",
+        "description": "あなたの経験や志望業界に合わせた質問選定。過去の練習データを分析し、効果的な学習を提案"
+      }
+    },
+    "learning": {
+      "title": "学習の進め方",
+      "subtitle": "3ステップの簡単な流れで、効果的に面接対策を進められます",
+      "step1": {
+        "title": "面接練習を開始",
+        "description": "実際の面接を想定した環境で、AIと1対1の練習を行います。音声認識で自然な会話を実現"
+      },
+      "step2": {
+        "title": "詳細なフィードバック",
+        "description": "英語力と面接対応力の両面から総合評価。具体的な改善点と模範回答を提示"
+      },
+      "step3": {
+        "title": "継続的な改善",
+        "description": "弱点を把握し、ターゲットを絞った練習を繰り返すことで、着実にスキルアップ"
+      }
+    }
+  }
+}

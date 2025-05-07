@@ -1,0 +1,124 @@
+{
+  "common": {
+    "startPractice": "Start Practicing Now",
+    "endInterview": "End Interview",
+    "viewFeedback": "View Feedback",
+    "send": "Send",
+    "voice": "Voice",
+    "keyboard": "Keyboard",
+    "recording": "Recording...",
+    "speakAgain": "Speak Again",
+    "typeAnswer": "Type your answer here...",
+    "cancel": "Cancel"
+  },
+  "settings": {
+    "title": "Interview Settings",
+    "mode": {
+      "label": "Select Question Type",
+      "general": "General",
+      "personalized": "Personalized",
+      "generalDescription": "Practice with commonly asked interview questions"
+    },
+    "background": {
+      "label": "Background",
+      "placeholder": "Enter your work history and experience"
+    },
+    "position": {
+      "label": "Target Position",
+      "placeholder": "Enter the position and industry you're applying for"
+    },
+    "startButton": "Start Interview"
+  },
+  "dialog": {
+    "confirm": {
+      "title": "End Interview?",
+      "message": "To check the results of past interviews, please press \"End Interview\".",
+      "cancel": "Cancel",
+      "end": "End Interview"
+    },
+    "complete": {
+      "title": "Interview Complete",
+      "message": "The interview session has ended. Would you like to review your feedback?"
+    }
+  },
+  "feedback": {
+    "title": "Results",
+    "subtitle": "Review your performance and get personalized feedback to improve your interview skills.",
+    "pricingNotice": "The following are the plans and features we are currently considering. Pricing and additional features for each plan will be determined in the future.",
+    "performance": {
+      "english": "English Skills",
+      "interview": "Interview Skills",
+      "vocabulary": {
+        "title": "Vocabulary",
+        "description": "Accuracy in selecting and using industry-specific terms and contextually appropriate vocabulary"
+      },
+      "grammar": {
+        "title": "Grammar",
+        "description": "Accuracy in tenses, subject-verb agreement, and use of prepositions and articles"
+      },
+      "structure": {
+        "title": "Structure",
+        "description": "Logical organization of responses based on STAR/CAR format"
+      },
+      "logic": {
+        "title": "Quantitative Evidence",
+        "description": "Presentation of achievements with specific numbers and percentages"
+      }
+    },
+    "practiceAgain": "Practice Again",
+    "tabs": {
+      "summary": "Summary",
+      "details": "Details"
+    },
+    "strengths": "Strengths",
+    "improvements": "Areas to Improve",
+    "actionItems": "Action Items",
+    "question": "Question {{number}}",
+    "yourAnswer": "Your Answer",
+    "englishFeedback": "Feedback on English Proficiency",
+    "interviewFeedback": "Feedback on Interview Skills",
+    "idealAnswer": "Ideal Answer",
+    "noData": "No feedback data available",
+    "viewPricingPlans": "View Subscription Plans",
+    "premiumFeatureNotice": "Upgrade to access all feedback details",
+    "extendedInterviewNotice": "Upgrade for interviews over 3 minutes"
+  },
+  "home": {
+    "hero": {
+      "title": "Master Your English Interview Skills with AI",
+      "subtitle": "Practice interviews anytime, anywhere with our AI-powered platform to improve your English and interview skills."
+    },
+    "features": {
+      "title": "Key Features",
+      "subtitle": "Comprehensive evaluation and feedback for effective interview preparation",
+      "anytime": {
+        "title": "Practice Anytime, Anywhere",
+        "description": "Available 24/7, practice as many times as you want with no limitations"
+      },
+      "evaluation": {
+        "title": "English & Interview Skills",
+        "description": "AI evaluates pronunciation, grammar, vocabulary, and response quality with detailed feedback"
+      },
+      "personalized": {
+        "title": "Personalized Learning",
+        "description": "Questions tailored to your experience and target industry, with analysis of past practice data"
+      }
+    },
+    "learning": {
+      "title": "Learning Process",
+      "subtitle": "Three simple steps to improve your interview skills",
+      "step1": {
+        "title": "Start Interview Practice",
+        "description": "One-on-one practice with AI in a realistic interview environment"
+      },
+      "step2": {
+        "title": "Detailed Feedback",
+        "description": "Comprehensive evaluation of both English and interview performance"
+      },
+      "step3": {
+        "title": "Continuous Improvement",
+        "description": "Target your weaknesses and practice repeatedly to improve skills"
+      }
+    }
+  }
+}
