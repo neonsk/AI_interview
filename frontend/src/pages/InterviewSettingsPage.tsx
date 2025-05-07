@@ -4,18 +4,42 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Users, UserCircle } from 'lucide-react';
 import Button from '../components/Button';
+import { useInterview } from '../context/InterviewContext';
+
+// 面接モードタイプの定義
+type InterviewMode = 'general' | 'personalized';
 
 const InterviewSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [mode, setMode] = useState<'general' | 'personalized'>('general');
-  const [background, setBackground] = useState('');
-  const [position, setPosition] = useState('');
+  const { startInterview } = useInterview();
+  const [mode, setMode] = useState<InterviewMode>('general');
+  const [resume, setResume] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
 
+  // インタビュー情報をセッションストレージに保存
   const handleStartInterview = () => {
-    if (mode === 'personalized' && (!background.trim() || !position.trim())) {
+    if (mode === 'personalized' && (!resume.trim() || !jobDescription.trim())) {
       return;
     }
+
+    // セッションストレージに設定を保存
+    sessionStorage.setItem('interviewMode', mode);
+    
+    if (mode === 'personalized') {
+      sessionStorage.setItem('resume', resume);
+      sessionStorage.setItem('jobDescription', jobDescription);
+    } else {
+      // 一般モードの場合は削除
+      sessionStorage.removeItem('resume');
+      sessionStorage.removeItem('jobDescription');
+    }
+
+    startInterview();
+    console.log('startInterview');
+    console.log('mode:', mode);
+    console.log('resume:', resume);
+    console.log('jobDescription:', jobDescription);
     navigate('/interview');
   };
 
@@ -87,30 +111,30 @@ const InterviewSettingsPage: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="background" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="resume" className="block text-sm font-medium text-gray-700 mb-1">
                     {t('settings.background.label')}
                   </label>
                   <textarea
-                    id="background"
+                    id="resume"
                     rows={4}
                     className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-4"
                     placeholder={t('settings.background.placeholder')}
-                    value={background}
-                    onChange={(e) => setBackground(e.target.value)}
+                    value={resume}
+                    onChange={(e) => setResume(e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700 mb-1">
                     {t('settings.position.label')}
                   </label>
                   <textarea
-                    id="position"
+                    id="jobDescription"
                     rows={4}
                     className="w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-4"
                     placeholder={t('settings.position.placeholder')}
-                    value={position}
-                    onChange={(e) => setPosition(e.target.value)}
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
                   />
                 </div>
               </div>
@@ -121,7 +145,7 @@ const InterviewSettingsPage: React.FC = () => {
                 variant="primary"
                 onClick={handleStartInterview}
                 className="w-full"
-                disabled={mode === 'personalized' && (!background.trim() || !position.trim())}
+                disabled={mode === 'personalized' && (!resume.trim() || !jobDescription.trim())}
               >
                 {t('settings.startButton')}
               </Button>

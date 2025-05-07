@@ -86,7 +86,19 @@ async def generate_interview_questions(
     content = response.choices[0].message.content
     
     try:
-        return json.loads(content)
+        response_data = json.loads(content)
+        
+        # interview_questionフィールドがあれば、questionフィールドに変換
+        if 'interview_question' in response_data:
+            response_data['question'] = response_data.pop('interview_question')
+            
+        # スキーマに合わせて必要なフィールドが存在するか確認
+        if 'question' not in response_data:
+            # questionフィールドがなければ追加（フォールバック）
+            response_data['question'] = response_data.get('raw_response', 
+                                       "Tell me about your experience and skills related to this position.")
+            
+        return response_data
     except json.JSONDecodeError:
-        # JSON形式でない場合は辞書に変換
-        return {"raw_response": content} 
+        # JSON形式でない場合は辞書に変換してquestionフィールドを追加
+        return {"question": content} 

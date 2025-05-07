@@ -10,7 +10,8 @@ import CompletionDialog from '../components/CompletionDialog';
 import InterviewTimer from '../components/InterviewTimer';
 import AudioRecorder from '../components/AudioRecorder';
 import { interviewConfig } from '../config/interview';
-import { getMockAIMessage, getMockFeedback } from '../utils/mockData';
+import { getMockFeedback } from '../utils/mockData';
+import { interviewApi } from '../services/api';
 
 const InterviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ const InterviewPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(interviewConfig.duration);
+  const [timeRemaining, setTimeRemaining] = useState<number>(interviewConfig.duration);
   const [showSpeakAgain, setShowSpeakAgain] = useState(false);
   const [playingUserAudio, setPlayingUserAudio] = useState<string | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
@@ -46,12 +47,6 @@ const InterviewPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (shouldAutoScroll && !isUserScrolling) {
-      scrollToBottom();
-    }
-  }, [messages, isLoading, transcription, isRecording]);
-
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
     
@@ -66,24 +61,119 @@ const InterviewPage: React.FC = () => {
     setIsUserScrolling(true);
   };
 
+  const generateQuestion = async (): Promise<string> => {
+    try {
+      const interviewMode = sessionStorage.getItem('interviewMode') || 'general';
+      let response;
+      
+      if (interviewMode === 'personalized') {
+        const resume = sessionStorage.getItem('resume') || '';
+        const jobDescription = sessionStorage.getItem('jobDescription') || '';
+        
+        if (resume && jobDescription) {
+          response = await interviewApi.generatePersonalizedQuestion(resume, jobDescription);
+        } else {
+          response = await interviewApi.generateGeneralQuestion();
+        }
+      } else {
+        response = await interviewApi.generateGeneralQuestion();
+      }
+      
+      return response.question;
+    } catch (error) {
+      logToFile('Error generating question', { error });
+      throw error;
+    }
+  };
+
+  const displayNextQuestion = async (isFirstQuestion: boolean = false, fallbackMessage: string = "Let me ask you another question about your experience."): Promise<boolean> => {
+    setIsLoading(true);
+    scrollToBottom();
+    setIsAudioLoading(true);
+    
+    try {
+      let aiMessage: string;
+      
+      if (isFirstQuestion) {
+        aiMessage = "Hello. Let's start the interview. At first, please introduce yourself.";
+      } else {
+        aiMessage = await generateQuestion();
+      }
+      
+      addMessage({
+        role: 'ai',
+        content: aiMessage,
+        isTextVisible: true,
+      });
+      
+      scrollToBottom();
+      playAIMessage(aiMessage);
+      setIsLoading(false);
+      return true;
+    } catch (error) {
+      addMessage({
+        role: 'ai',
+        content: fallbackMessage,
+        isTextVisible: true,
+      });
+      
+      scrollToBottom();
+      playAIMessage(fallbackMessage);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(() => {
-        startInterview();
-        setTimeout(askFirstQuestion, 1000);
-      })
-      .catch(err => {
+    let isComponentMounted = true; // コンポーネントのマウント状態を追跡
+    
+    // 面接の初期化処理
+    const initializeInterview = async () => {
+      // まず面接状態をリセットして開始
+      endInterview();
+      startInterview();
+      
+      // マイク許可を試みる
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 許可された場合はそのまま音声モードで続行
+      } catch (err) {
+        if (!isComponentMounted) return;
+        // マイク許可が得られなかった場合はキーボードモードに切り替え
         logToFile('Microphone access denied', { error: err });
         setIsKeyboardMode(true);
-      });
+        // ただし面接自体は中断しない
+      }
+      
+      if (!isComponentMounted) return;
+      
+      // マイクの許可状況に関わらず、少し遅延してから最初の質問を表示
+      setTimeout(() => {
+        if (!isComponentMounted) return;
+        
+        // 最初の質問を表示
+        displayNextQuestion(true)
+          .then(() => {
+            if (!isComponentMounted) return;
+            setIsAIQuestionReady(true);
+          });
+      }, 1000);
+    };
     
+    // 初期化を実行
+    initializeInterview();
+    
+    // クリーンアップ関数
     return () => {
+      isComponentMounted = false; // アンマウント時にフラグを更新
+      
+      // 必要なクリーンアップ処理
       endInterview();
       if (isPlaying) {
         window.speechSynthesis.cancel();
       }
     };
-  }, []);
+  }, []); // 空の依存配列で一度だけ実行
 
   useEffect(() => {
     if (timeRemaining > 0) {
@@ -101,25 +191,13 @@ const InterviewPage: React.FC = () => {
     if (shouldAutoScroll && !isUserScrolling) {
       scrollToBottom();
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, transcription, isRecording]);
 
-  const askFirstQuestion = async () => {
-    setIsLoading(true);
-    scrollToBottom();
-    setIsAudioLoading(true);
-    setTimeout(() => {
-      const aiMessage = getMockAIMessage();
-      addMessage({
-        role: 'ai',
-        content: aiMessage,
-        isTextVisible: true,
-      });
+  useEffect(() => {
+    if (shouldAutoScroll && !isUserScrolling) {
       scrollToBottom();
-      playAIMessage(aiMessage);
-      setIsAIQuestionReady(true);
-      setIsLoading(false);
-    }, 1500);
-  };
+    }
+  }, [messages, isLoading]);
 
   const handleEndInterview = () => {
     const mockFeedback = getMockFeedback(messages);
@@ -145,7 +223,6 @@ const InterviewPage: React.FC = () => {
     
     let finalTranscription = transcription.trim();
     
-    // 音声URLがある場合は、トランスクリプションが空でも送信
     if (!finalTranscription && !audioUrl) {
       setShowSpeakAgain(true);
       setTimeout(() => setShowSpeakAgain(false), 2000);
@@ -170,7 +247,7 @@ const InterviewPage: React.FC = () => {
 
   const toggleKeyboardMode = () => {
     if (isRecording) {
-      handleStopRecording(); // 録音中のデータを保存
+      handleStopRecording();
     }
     setShouldAutoScroll(true);
     setIsKeyboardMode(!isKeyboardMode);
@@ -180,7 +257,7 @@ const InterviewPage: React.FC = () => {
     setTextInput(e.target.value);
   };
 
-  const handleTextInputSubmit = () => {
+  const handleTextInputSubmit = async () => {
     const trimmedText = textInput.trim();
     if (!trimmedText) return;
     logToFile('Text input submitted', { trimmedText });
@@ -194,24 +271,10 @@ const InterviewPage: React.FC = () => {
     
     setTextInput('');
     
-    setIsLoading(true);
-    scrollToBottom();
-    setIsAudioLoading(true);
-    
-    setTimeout(() => {
-      const aiMessage = getMockAIMessage();
-      addMessage({
-        role: 'ai',
-        content: aiMessage,
-        isTextVisible: true,
-      });
-      scrollToBottom();
-      playAIMessage(aiMessage);
-      setIsLoading(false);
-    }, 2000);
+    await displayNextQuestion(false, "Sorry, I didn't catch that. Please try again.");
   };
 
-  const sendResponse = (text: string, audioUrl?: string) => {
+  const sendResponse = async (text: string, audioUrl?: string) => {
     const trimmedText = text.trim();
     logToFile('sendResponse called', {
       originalText: text,
@@ -228,26 +291,11 @@ const InterviewPage: React.FC = () => {
       isTextVisible: true,
     });
     
-    setIsLoading(true);
-    scrollToBottom();
-    setIsAudioLoading(true);
-    
-    setTimeout(() => {
-      const aiMessage = getMockAIMessage();
-      addMessage({
-        role: 'ai',
-        content: aiMessage,
-        isTextVisible: true,
-      });
-      scrollToBottom();
-      playAIMessage(aiMessage);
-      setIsLoading(false);
-    }, 2000);
+    await displayNextQuestion(false, "Sorry, I didn't catch that. Please try again.");
   };
 
   const playAIMessage = async (text: string) => {
     try {
-      // Note: This is a mock implementation. In production, you would call the ChatGPT API
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = interviewConfig.synthesis.language;
       utterance.onend = () => setIsAudioLoading(false);
@@ -279,7 +327,6 @@ const InterviewPage: React.FC = () => {
     if (!audioUrl) return;
     
     if (playingUserAudio === messageId) {
-      // Stop current playback
       const audioElements = document.getElementsByTagName('audio');
       for (let audio of audioElements) {
         audio.pause();
@@ -287,7 +334,6 @@ const InterviewPage: React.FC = () => {
       }
       setPlayingUserAudio(null);
     } else {
-      // Stop any existing playback
       if (playingUserAudio) {
         const audioElements = document.getElementsByTagName('audio');
         for (let audio of audioElements) {
@@ -296,7 +342,6 @@ const InterviewPage: React.FC = () => {
         }
       }
       
-      // Start new playback
       const audio = new Audio(audioUrl);
       audio.onended = () => setPlayingUserAudio(null);
       audio.play();
@@ -516,7 +561,7 @@ const InterviewPage: React.FC = () => {
                       {t('common.speakAgain')}
                     </div>
                   )}
-                  <div className="w-10 h-10 md:w-12 md:h-12" /> {/* スペーサー */}
+                  <div className="w-10 h-10 md:w-12 md:h-12" />
                   <button
                     onClick={handleStartRecording}
                     disabled={isLoading || !isAIQuestionReady}
