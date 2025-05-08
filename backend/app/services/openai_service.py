@@ -4,6 +4,7 @@ import aiofiles
 import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+import io
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
@@ -121,4 +122,41 @@ class OpenAIService:
                 return content
                 
         except Exception as e:
-            raise Exception(f"質問生成中にエラーが発生しました: {str(e)}") 
+            raise Exception(f"質問生成中にエラーが発生しました: {str(e)}")
+    
+    async def text_to_speech(self, text: str, voice: str = None) -> bytes:
+        """テキストを音声に変換する
+        
+        Args:
+            text: 音声に変換するテキスト
+            voice: 使用する音声タイプ (alloy, echo, fable, onyx, nova, shimmer)
+            
+        Returns:
+            bytes: 音声データのバイナリ
+        """
+        try:
+            # 指定された音声タイプが利用可能かチェック
+            selected_voice = voice if voice in settings.OPENAI_TTS_AVAILABLE_VOICES else settings.OPENAI_TTS_VOICE
+            
+            logger.info(f"音声合成リクエスト - テキスト長: {len(text)}, 音声: {selected_voice}")
+            
+            response = await self.client.audio.speech.create(
+                model=settings.OPENAI_TTS_MODEL,
+                voice=selected_voice,
+                input=text,
+                response_format=settings.OPENAI_TTS_RESPONSE_FORMAT
+            )
+            
+            # レスポンスからバイナリデータを取得
+            audio_data = io.BytesIO()
+            for chunk in response.iter_bytes(chunk_size=4096):
+                audio_data.write(chunk)
+            audio_data.seek(0)
+            
+            # バイナリデータを返す
+            logger.info(f"音声合成成功 - 出力サイズ: {audio_data.getbuffer().nbytes} bytes")
+            return audio_data.getvalue()
+            
+        except Exception as e:
+            logger.error(f"音声合成中にエラーが発生しました: {str(e)}")
+            raise Exception(f"音声合成エラー: {str(e)}") 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { logToFile } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
-import { Mic, X, Square, Send, Keyboard, Play, Pause, Eye, EyeOff, XCircle } from 'lucide-react';
+import { Mic, X, Square, Send, Keyboard, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import { useInterview } from '../context/InterviewContext';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -33,6 +33,8 @@ const InterviewPage: React.FC = () => {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [isAnyAudioPlaying, setIsAnyAudioPlaying] = useState(false);
+  const [audioElements, setAudioElements] = useState<{[key: string]: HTMLAudioElement}>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<HTMLDivElement>(null);
@@ -170,6 +172,7 @@ const InterviewPage: React.FC = () => {
         aiMessage = await generateQuestion();
       }
       
+      // メッセージを追加
       addMessage({
         role: 'assistant',
         content: aiMessage,
@@ -177,7 +180,6 @@ const InterviewPage: React.FC = () => {
       });
       
       scrollToBottom();
-      playAIMessage(aiMessage);
       setIsLoading(false);
       return true;
     } catch (error) {
@@ -188,10 +190,76 @@ const InterviewPage: React.FC = () => {
       });
       
       scrollToBottom();
-      playAIMessage(fallbackMessage);
       setIsLoading(false);
       return false;
     }
+  };
+
+  // 音声を生成して保存・再生する関数
+  const generateAndPlayAudio = async (text: string, messageId: string) => {
+    try {
+      const audioBlob = await interviewApi.generateSpeech(text);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      // 音声を再生
+      audio.onended = () => {
+        setIsAudioLoading(false);
+        setIsAnyAudioPlaying(false);
+        setIsPlaying(null);
+      };
+      
+      audio.onerror = (error) => {
+        logToFile('Error playing generated audio', { error });
+        setIsAudioLoading(false);
+        setIsAnyAudioPlaying(false);
+        setIsPlaying(null);
+      };
+      
+      // 音声を保存
+      setAudioElements(prev => ({
+        ...prev,
+        [messageId]: audio
+      }));
+      
+      // 自動再生
+      updatePlayingState(true, messageId);
+      audio.play();
+    } catch (error) {
+      logToFile('Error generating speech', { error, messageId });
+      setIsAudioLoading(false);
+      setIsAnyAudioPlaying(false);
+      setIsPlaying(null);
+      
+      // フォールバック: ブラウザの音声合成APIを使用
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = interviewConfig.synthesis.language;
+      utterance.onend = () => {
+        setIsAudioLoading(false);
+        setIsAnyAudioPlaying(false);
+        setIsPlaying(null);
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // メッセージが追加されたときに音声を生成
+  useEffect(() => {
+    // メッセージが存在し、最後のメッセージがAIのものであれば
+    if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+      const lastMessage = messages[messages.length - 1];
+      
+      // すでに音声が生成されていなければ
+      if (!audioElements[lastMessage.id]) {
+        generateAndPlayAudio(lastMessage.content, lastMessage.id);
+      }
+    }
+  }, [messages, audioElements]);
+
+  // 不要になったメソッドは修正
+  const playAIMessage = async (text: string) => {
+    // このメソッドはdisplayNextQuestionで統合済みのため、必要なくなりました
+    logToFile('playAIMessage is deprecated, use stored audio elements instead');
   };
 
   useEffect(() => {
@@ -233,17 +301,34 @@ const InterviewPage: React.FC = () => {
     // 初期化を実行
     initializeInterview();
     
-    // クリーンアップ関数
     return () => {
-      isComponentMounted = false; // アンマウント時にフラグを更新
+      isComponentMounted = false;
       
-      // 必要なクリーンアップ処理
-      endInterview();
+      // 音声リソースのクリーンアップ
       if (isPlaying) {
         window.speechSynthesis.cancel();
       }
+      
+      // 生成した音声のクリーンアップ
+      Object.values(audioElements).forEach(audio => {
+        audio.pause();
+        audio.src = '';
+      });
+      
+      // Blob URLのクリーンアップ
+      Object.keys(audioElements).forEach(key => {
+        if (audioElements[key].src.startsWith('blob:')) {
+          URL.revokeObjectURL(audioElements[key].src);
+        }
+      });
+      
+      // 状態をクリア
+      setAudioElements({});
+      
+      // 必要なクリーンアップ処理
+      endInterview();
     };
-  }, []); // 空の依存配列で一度だけ実行
+  }, []);
 
   useEffect(() => {
     if (timeRemaining > 0) {
@@ -383,31 +468,120 @@ const InterviewPage: React.FC = () => {
     await processUserInput(trimmedText);
   };
 
-  const playAIMessage = async (text: string) => {
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = interviewConfig.synthesis.language;
-      utterance.onend = () => setIsAudioLoading(false);
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      logToFile('Error playing TTS', { error });
-      setIsAudioLoading(false);
+  // 音声再生状態を更新する関数
+  const updatePlayingState = (playing: boolean, messageId: string | null = null) => {
+    // 音声の再生状態を更新（true: 再生中、false: 停止中）
+    setIsAnyAudioPlaying(playing);
+    
+    // 再生中のメッセージIDを更新（null: どのメッセージも再生していない）
+    setIsPlaying(messageId);
+    
+    // ログ出力
+    if (playing && messageId) {
+      logToFile('Audio playback started', { messageId });
+    } else {
+      logToFile('Audio playback stopped');
     }
   };
 
-  const playAudio = (messageId: string, content: string) => {
-    if ('speechSynthesis' in window) {
-      if (isPlaying === messageId) {
-        window.speechSynthesis.cancel();
-        setIsPlaying(null);
-      } else {
-        if (isPlaying) {
-          window.speechSynthesis.cancel();
-        }
+  const playAudio = async (messageId: string, content: string) => {
+    // 再生中の音声があれば停止
+    if (isPlaying === messageId) {
+      if (audioElements[messageId]) {
+        audioElements[messageId].pause();
+        audioElements[messageId].currentTime = 0;
+        updatePlayingState(false, null);
+      }
+      return;
+    }
+    
+    // 録音中または何らかの音声が再生中の場合は処理をキャンセル
+    if (isAnyAudioPlaying || isRecording) {
+      logToFile('Cannot play audio: already playing or recording', { isAnyAudioPlaying, isRecording });
+      return;
+    }
+    
+    // 他の再生中の音声があれば停止
+    if (isPlaying && audioElements[isPlaying]) {
+      audioElements[isPlaying].pause();
+      audioElements[isPlaying].currentTime = 0;
+    }
+    
+    try {
+      // すでに生成済みの音声があるか確認
+      if (audioElements[messageId]) {
+        // 既存の音声を再生
+        updatePlayingState(true, messageId);
+        
+        // 再生完了時のイベントリスナーを設定
+        const audio = audioElements[messageId];
+        
+        // 再生前に既存のイベントリスナーをクリア
+        const newAudio = new Audio(audio.src);
+        
+        // 再生完了時のイベントリスナーを設定
+        newAudio.onended = () => {
+          updatePlayingState(false, null);
+        };
+        
+        newAudio.onerror = (error) => {
+          logToFile('Error playing cached audio', { error, messageId });
+          updatePlayingState(false, null);
+        };
+        
+        // 再生
+        newAudio.play().catch(error => {
+          logToFile('Error playing audio', { error, messageId });
+          updatePlayingState(false, null);
+        });
+        
+        // 新しい音声要素で置き換え
+        setAudioElements(prev => ({
+          ...prev,
+          [messageId]: newAudio
+        }));
+        
+        return;
+      }
+      
+      // 音声を生成
+      updatePlayingState(true, messageId);
+      const audioBlob = await interviewApi.generateSpeech(content);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // 音声エレメントを作成
+      const audio = new Audio(audioUrl);
+      
+      // イベントハンドラーを設定
+      audio.onended = () => {
+        updatePlayingState(false, null);
+      };
+      
+      audio.onerror = (error) => {
+        logToFile('Error playing generated audio', { error, messageId });
+        updatePlayingState(false, null);
+      };
+      
+      // 状態を更新
+      setAudioElements(prev => ({
+        ...prev,
+        [messageId]: audio
+      }));
+      
+      // 再生
+      audio.play();
+    } catch (error) {
+      logToFile('Error generating or playing audio', { error, messageId });
+      updatePlayingState(false, null);
+      
+      // フォールバック: ブラウザの音声合成APIを使用
+      if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(content);
-        utterance.onend = () => setIsPlaying(null);
+        utterance.onend = () => {
+          updatePlayingState(false, null);
+        };
+        updatePlayingState(true, messageId);
         window.speechSynthesis.speak(utterance);
-        setIsPlaying(messageId);
       }
     }
   };
@@ -415,14 +589,23 @@ const InterviewPage: React.FC = () => {
   const handleUserAudioPlayback = (messageId: string, audioUrl?: string) => {
     if (!audioUrl) return;
     
+    // 何らかの音声が再生中で、現在のメッセージの音声でない場合、または録音中の場合は処理をキャンセル
+    if ((isAnyAudioPlaying && playingUserAudio !== messageId) || isRecording) {
+      logToFile('Cannot play user audio: already playing or recording', { isAnyAudioPlaying, playingUserAudio, isRecording });
+      return;
+    }
+    
     if (playingUserAudio === messageId) {
+      // 再生中の音声を停止
       const audioElements = document.getElementsByTagName('audio');
       for (let audio of audioElements) {
         audio.pause();
         audio.currentTime = 0;
       }
       setPlayingUserAudio(null);
+      setIsAnyAudioPlaying(false);
     } else {
+      // 他に再生中の音声があれば停止
       if (playingUserAudio) {
         const audioElements = document.getElementsByTagName('audio');
         for (let audio of audioElements) {
@@ -431,10 +614,31 @@ const InterviewPage: React.FC = () => {
         }
       }
       
+      // 新しい音声を再生
       const audio = new Audio(audioUrl);
-      audio.onended = () => setPlayingUserAudio(null);
-      audio.play();
+      
+      // 再生完了時のイベントリスナーを設定
+      audio.onended = () => {
+        setPlayingUserAudio(null);
+        setIsAnyAudioPlaying(false);
+      };
+      
+      // エラー発生時のイベントリスナーを設定
+      audio.onerror = (error) => {
+        logToFile('Error playing user audio', { error, messageId });
+        setPlayingUserAudio(null);
+        setIsAnyAudioPlaying(false);
+      };
+      
+      // 再生
+      audio.play().catch(error => {
+        logToFile('Error playing user audio', { error, messageId });
+        setPlayingUserAudio(null);
+        setIsAnyAudioPlaying(false);
+      });
+      
       setPlayingUserAudio(messageId);
+      setIsAnyAudioPlaying(true);
     }
   };
 
@@ -493,19 +697,22 @@ const InterviewPage: React.FC = () => {
                     <div className="flex items-center space-x-2 mt-2">
                       <button
                         onClick={() => playAudio(message.id, message.content)}
-                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        aria-label={isPlaying === message.id ? "Pause audio" : "Play audio"}
+                        className={`p-1 ${isPlaying === message.id ? 'bg-gray-200' : 'hover:bg-gray-100'} rounded-full transition-colors ${
+                          (isAnyAudioPlaying && isPlaying !== message.id) || isRecording ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        aria-label={isPlaying === message.id ? "停止" : "再生"}
+                        disabled={(isAnyAudioPlaying && isPlaying !== message.id) || isRecording}
                       >
                         {isPlaying === message.id ? (
                           <Pause size={16} className="text-gray-600" />
                         ) : (
-                          <Play size={16} className="text-gray-600" />
+                          <Play size={16} className={`text-gray-600 ${isAnyAudioPlaying || isRecording ? 'opacity-50' : ''}`} />
                         )}
                       </button>
                       <button
                         onClick={() => toggleMessageVisibility(message.id)}
                         className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        aria-label={message.isTextVisible ? "Hide text" : "Show text"}
+                        aria-label={message.isTextVisible ? "テキストを隠す" : "テキストを表示"}
                       >
                         {message.isTextVisible ? (
                           <EyeOff size={16} className="text-gray-600" />
@@ -524,13 +731,16 @@ const InterviewPage: React.FC = () => {
                       <div className="flex items-center gap-2 mt-1 text-blue-100">
                         <button
                           onClick={() => handleUserAudioPlayback(message.id, message.audioUrl)}
-                          className="p-1 hover:bg-blue-500 rounded-full transition-colors"
-                          aria-label={playingUserAudio === message.id ? "Stop playback" : "Play recording"}
+                          className={`p-1 hover:bg-blue-500 rounded-full transition-colors ${
+                            (isAnyAudioPlaying && playingUserAudio !== message.id) || isRecording ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          aria-label={playingUserAudio === message.id ? "停止" : "録音を再生"}
+                          disabled={(isAnyAudioPlaying && playingUserAudio !== message.id) || isRecording}
                         >
                           {playingUserAudio === message.id ? (
                             <Pause size={14} />
                           ) : (
-                            <Play size={14} />
+                            <Play size={14} className={isAnyAudioPlaying || isRecording ? 'opacity-50' : ''} />
                           )}
                         </button>
                       </div>
@@ -595,7 +805,7 @@ const InterviewPage: React.FC = () => {
                 variant="primary"
                 onClick={handleTextInputSubmit}
                 leftIcon={<Send size={18} />}
-                disabled={isLoading}
+                disabled={isLoading || isAnyAudioPlaying}
                 className="relative bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 animate-pulse-subtle overflow-hidden before:absolute before:inset-0 before:bg-white/20 before:animate-shine"
                 style={{
                   animation: isLoading ? 'none' : 'pulse-subtle 2s infinite'
@@ -606,7 +816,9 @@ const InterviewPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={toggleKeyboardMode}
+                disabled={isAnyAudioPlaying}
                 leftIcon={<Mic size={18} />}
+                className={isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 {t('common.voice')}
               </Button>
@@ -621,23 +833,28 @@ const InterviewPage: React.FC = () => {
                 <>
                   <button
                     onClick={handleCancel}
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors"
+                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center ${isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-100'} transition-colors`}
                     aria-label="Cancel recording"
+                    disabled={isAnyAudioPlaying}
                   >
                     <X className="w-5 h-5 md:w-6 md:h-6" />
                   </button>
 
                   <button
                     onClick={() => audioRecorderRef.current?.querySelector('button')?.click()}
-                    className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-all transform hover:scale-105"
+                    className={`w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-100 text-blue-600 ${isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200'} flex items-center justify-center transition-all transform ${isAnyAudioPlaying ? '' : 'hover:scale-105'}`}
                     aria-label="Stop recording"
+                    disabled={isAnyAudioPlaying}
                   >
                     <Square className="w-6 h-6 md:w-8 md:h-8" />
                   </button>
 
                   <button
                     onClick={toggleKeyboardMode}
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    disabled={isAnyAudioPlaying}
+                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center ${
+                      isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'
+                    } transition-colors`}
                     aria-label={t('common.keyboard')}
                   >
                     <Keyboard className="w-5 h-5 md:w-6 md:h-6" />
@@ -653,9 +870,9 @@ const InterviewPage: React.FC = () => {
                   <div className="w-10 h-10 md:w-12 md:h-12" />
                   <button
                     onClick={handleStartRecording}
-                    disabled={isLoading || !isAIQuestionReady}
+                    disabled={isLoading || !isAIQuestionReady || isAnyAudioPlaying}
                     className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center transition-all transform hover:scale-105 shadow-lg hover:shadow-xl ${
-                      isLoading || !isAIQuestionReady 
+                      isLoading || !isAIQuestionReady || isAnyAudioPlaying
                         ? 'bg-gray-400 cursor-not-allowed opacity-50' 
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
@@ -666,7 +883,10 @@ const InterviewPage: React.FC = () => {
 
                   <button
                     onClick={toggleKeyboardMode}
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    disabled={isAnyAudioPlaying}
+                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center ${
+                      isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'
+                    } transition-colors`}
                     aria-label={t('common.keyboard')}
                   >
                     <Keyboard className="w-5 h-5 md:w-6 md:h-6" />

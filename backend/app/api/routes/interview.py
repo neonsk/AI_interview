@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi.responses import Response
 from typing import Dict, List, Any
 from pydantic import BaseModel
 
-from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory
+from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest
 from app.services.openai_service import OpenAIService
 from app.core.logger import setup_logger
 from app.core.config import InterviewMode
@@ -63,4 +64,27 @@ async def generate_personalized_question(
         return {"question": question}
     except Exception as e:
         logger.error(f"質問生成エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/text-to-speech")
+async def text_to_speech(request: TextToSpeechRequest):
+    """テキストから音声を生成する"""
+    try:
+        logger.info(f"音声合成リクエスト: text長={len(request.text)}文字, voice={request.voice}")
+        
+        # OpenAI APIを使用して音声を生成
+        audio_data = await openai_service.text_to_speech(
+            text=request.text,
+            voice=request.voice
+        )
+        
+        # 音声データを返す
+        logger.info(f"音声合成完了: サイズ={len(audio_data)}バイト")
+        return Response(
+            content=audio_data,
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "attachment; filename=speech.mp3"}
+        )
+    except Exception as e:
+        logger.error(f"音声合成エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

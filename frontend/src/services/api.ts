@@ -28,6 +28,12 @@ interface Message {
   content: string;
 }
 
+// 音声合成リクエストの型定義
+interface TextToSpeechRequest {
+  text: string;
+  voice?: string;
+}
+
 // インタビュー関連のAPI
 export const interviewApi = {
   // 一般的な質問を生成
@@ -62,6 +68,29 @@ export const interviewApi = {
       return response.data;
     } catch (error) {
       logToFile('Error generating personalized question', { error });
+      throw error;
+    }
+  },
+
+  // テキストから音声を生成
+  async generateSpeech(text: string, voice: string = 'alloy'): Promise<Blob> {
+    try {
+      logToFile('Generating speech from text', { textLength: text.length, voice });
+      
+      const response = await axios.post(
+        `${API_BASE_URL}/api/interview/text-to-speech`,
+        { text, voice },
+        { responseType: 'blob' } // 重要: レスポンスをBlobとして受け取る
+      );
+      
+      logToFile('Speech generation successful', { 
+        contentType: response.headers['content-type'],
+        contentLength: response.data.size 
+      });
+      
+      return response.data;
+    } catch (error) {
+      logToFile('Error generating speech', { error });
       throw error;
     }
   },
