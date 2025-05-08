@@ -18,7 +18,7 @@ class InterviewMode(str, Enum):
 
 # プロンプトファイルパス
 PROMPTS_DIR = os.getenv("PROMPTS_DIR", "app/core/prompts")
-INTERVIEW_QUESTIONS_PROMPT_PATH = Path(PROMPTS_DIR) / "interview_questions.json"
+INTERVIEW_QUESTIONS_PROMPT_PATH = Path(PROMPTS_DIR) / "interview_questions.yaml"
 
 # OpenAI APIパラメータ
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")

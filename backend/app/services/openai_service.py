@@ -2,6 +2,7 @@ import os
 import json
 import aiofiles
 import logging
+import yaml
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import io
@@ -22,14 +23,24 @@ class OpenAIService:
         self.model = settings.OPENAI_MODEL
         self.temperature = settings.OPENAI_TEMPERATURE
     
-    async def _load_prompt_json(self, path: str) -> Dict[str, Any]:
-        """プロンプトJSONファイルを読み込む"""
+    async def _load_prompt(self, path: str) -> Dict[str, Any]:
+        """プロンプトファイル（JSONまたはYAML）を読み込む"""
         try:
+            # Pathオブジェクトを文字列に変換
+            path_str = str(path)
+            
             async with aiofiles.open(path, mode='r', encoding='utf-8') as f:
                 content = await f.read()
-                return json.loads(content)
+                
+                # ファイル拡張子で処理を分ける
+                if path_str.endswith('.json'):
+                    return json.loads(content)
+                elif path_str.endswith('.yaml') or path_str.endswith('.yml'):
+                    return yaml.safe_load(content)
+                else:
+                    raise ValueError(f"サポートされていないファイル形式です: {path}")
         except Exception as e:
-            raise ValueError(f"プロンプトJSONの読み込みに失敗しました: {str(e)}")
+            raise ValueError(f"プロンプトファイルの読み込みに失敗しました: {str(e)}")
     
     def _format_prompt_template(self, template: str, **kwargs) -> str:
         """テンプレートを値で置換する"""
@@ -38,9 +49,9 @@ class OpenAIService:
     async def generate_interview_question(self, request: InterviewQuestionRequest) -> str:
         """面接質問を生成する"""
         try:
-            # プロンプトJSONの読み込み
+            # プロンプトファイルの読み込み
             prompt_path = settings.INTERVIEW_QUESTIONS_PROMPT_PATH
-            prompt_data = await self._load_prompt_json(prompt_path)
+            prompt_data = await self._load_prompt(prompt_path)
             
             # モードに応じたプロンプト設定を取得
             mode_key = request.mode.value
