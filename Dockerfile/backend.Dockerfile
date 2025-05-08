@@ -6,6 +6,9 @@ WORKDIR /app
 COPY ./backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ログディレクトリの作成とパーミッション設定
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
 # アプリケーションコードをコピー
 COPY ./backend /app/
 

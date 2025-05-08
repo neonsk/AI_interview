@@ -1,48 +1,66 @@
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Body
+from typing import Dict, List, Any
+from pydantic import BaseModel
 
-from app.core.config import INTERVIEW_QUESTIONS_PROMPT_PATH, InterviewMode
-from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse
-from app.services.openai_service import generate_interview_questions
+from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory
+from app.services.openai_service import OpenAIService
+from app.core.logger import setup_logger
+from app.core.config import InterviewMode
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
+openai_service = OpenAIService()
+logger = setup_logger()
+
+# リクエストのためのスキーマ
+class GeneralQuestionRequest(BaseModel):
+    message_history: List[Dict[str, str]] = []
 
 @router.get("/")
 async def get_interview_info():
     return {"message": "面接情報API"}
 
-@router.post("/generate-questions", response_model=InterviewQuestionResponse)
-async def generate_questions(request: InterviewQuestionRequest) -> Dict[str, Any]:
-    """
-    面接質問を生成するエンドポイント
-    
-    Args:
-        request: 面接質問生成リクエスト
-        
-    Returns:
-        生成された面接質問
-    """
+@router.post("/questions/general", response_model=InterviewQuestionResponse)
+async def generate_general_question(request: GeneralQuestionRequest = Body(...)):
+    """汎用的な面接質問を生成する"""
     try:
-        # 基本パラメータ
-        common_params = {
-            "prompt_path": INTERVIEW_QUESTIONS_PROMPT_PATH,
-            "mode": request.mode,
-            "params": request.custom_params
-        }
+        logger.info(f"汎用質問生成リクエスト: message_history={len(request.message_history)}件")
         
-        # モードに応じた追加パラメータ
-        if request.mode == InterviewMode.PERSONALIZE:
-            if not request.resume or not request.job_description:
-                raise HTTPException(status_code=400, detail="personalizeモードには経歴と応募求人情報が必要です")
-            
-            common_params["resume"] = request.resume
-            common_params["job_description"] = request.job_description
+        # リクエストのデータ構造をInterviewQuestionRequestに変換
+        interview_request = InterviewQuestionRequest(
+            mode=InterviewMode.GENERAL, 
+            message_history=request.message_history
+        )
         
-        # OpenAI APIを呼び出して質問を生成
-        questions = await generate_interview_questions(**common_params)
+        # 質問生成
+        question = await openai_service.generate_interview_question(interview_request)
+        logger.info(f"生成された質問: {question}")
         
-        return questions
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"question": question}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"質問生成中にエラーが発生しました: {str(e)}")
+        logger.error(f"質問生成エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/questions/personalized", response_model=InterviewQuestionResponse)
+async def generate_personalized_question(
+    resume: str = Body(...), 
+    job_description: str = Body(...),
+    message_history: List[Dict[str, Any]] = Body(default=[])
+):
+    """個人化された面接質問を生成する"""
+    try:
+        logger.info(f"個人化質問生成リクエスト: message_history={len(message_history)}件")
+        
+        request = InterviewQuestionRequest(
+            mode=InterviewMode.PERSONALIZED,
+            resume=resume,
+            job_description=job_description,
+            message_history=message_history
+        )
+        
+        question = await openai_service.generate_interview_question(request)
+        logger.info(f"生成された質問: {question}")
+        
+        return {"question": question}
+    except Exception as e:
+        logger.error(f"質問生成エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

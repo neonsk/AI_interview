@@ -66,17 +66,29 @@ const InterviewPage: React.FC = () => {
       const interviewMode = sessionStorage.getItem('interviewMode') || 'general';
       let response;
       
+      // 対話履歴をAPI用のフォーマットに変換
+      const messageHistoryForApi = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      
+      // ログ出力（デバッグ用）
+      logToFile('Sending message history to API', { 
+        messageCount: messageHistoryForApi.length,
+        messages: messageHistoryForApi
+      });
+      
       if (interviewMode === 'personalized') {
         const resume = sessionStorage.getItem('resume') || '';
         const jobDescription = sessionStorage.getItem('jobDescription') || '';
         
         if (resume && jobDescription) {
-          response = await interviewApi.generatePersonalizedQuestion(resume, jobDescription);
+          response = await interviewApi.generatePersonalizedQuestion(resume, jobDescription, messageHistoryForApi);
         } else {
-          response = await interviewApi.generateGeneralQuestion();
+          response = await interviewApi.generateGeneralQuestion(messageHistoryForApi);
         }
       } else {
-        response = await interviewApi.generateGeneralQuestion();
+        response = await interviewApi.generateGeneralQuestion(messageHistoryForApi);
       }
       
       return response.question;
@@ -86,7 +98,61 @@ const InterviewPage: React.FC = () => {
     }
   };
 
-  const displayNextQuestion = async (isFirstQuestion: boolean = false, fallbackMessage: string = "Let me ask you another question about your experience."): Promise<boolean> => {
+  // ユーザーが最後に追加したメッセージを含む、最新のメッセージリストを作成
+  const createUpdatedMessageList = (userMessage: { content: string, audioUrl?: string }): any[] => {
+    return [...messages, {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userMessage.content,
+      audioUrl: userMessage.audioUrl,
+      isTextVisible: true
+    }];
+  };
+
+  // APIリクエスト用のメッセージ履歴を生成
+  const generateQuestionWithMessages = async (messagesForApi: any[]): Promise<string> => {
+    try {
+      const interviewMode = sessionStorage.getItem('interviewMode') || 'general';
+      let response;
+      
+      // 対話履歴をAPI用のフォーマットに変換
+      const messageHistoryForApi = messagesForApi.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      
+      // ログ出力（デバッグ用）
+      logToFile('Generating question with explicit messages', { 
+        messageCount: messageHistoryForApi.length,
+        lastMessage: messageHistoryForApi[messageHistoryForApi.length - 1]
+      });
+      
+      if (interviewMode === 'personalized') {
+        const resume = sessionStorage.getItem('resume') || '';
+        const jobDescription = sessionStorage.getItem('jobDescription') || '';
+        
+        if (resume && jobDescription) {
+          response = await interviewApi.generatePersonalizedQuestion(resume, jobDescription, messageHistoryForApi);
+        } else {
+          response = await interviewApi.generateGeneralQuestion(messageHistoryForApi);
+        }
+      } else {
+        response = await interviewApi.generateGeneralQuestion(messageHistoryForApi);
+      }
+      
+      return response.question;
+    } catch (error) {
+      logToFile('Error generating question', { error });
+      throw error;
+    }
+  };
+
+  // 質問を生成して表示する統合関数
+  const displayNextQuestion = async (
+    messagesForApi: any[] | undefined = undefined,
+    isFirstQuestion: boolean = false, 
+    fallbackMessage: string = "Let me ask you another question about your experience."
+  ): Promise<boolean> => {
     setIsLoading(true);
     scrollToBottom();
     setIsAudioLoading(true);
@@ -96,12 +162,16 @@ const InterviewPage: React.FC = () => {
       
       if (isFirstQuestion) {
         aiMessage = "Hello. Let's start the interview. At first, please introduce yourself.";
+      } else if (messagesForApi) {
+        // 明示的に指定されたメッセージリストを使用（ユーザーの最新メッセージが含まれる）
+        aiMessage = await generateQuestionWithMessages(messagesForApi);
       } else {
+        // 現在のmessages状態を使用（初回質問や最新メッセージが不要なとき）
         aiMessage = await generateQuestion();
       }
       
       addMessage({
-        role: 'ai',
+        role: 'assistant',
         content: aiMessage,
         isTextVisible: true,
       });
@@ -112,7 +182,7 @@ const InterviewPage: React.FC = () => {
       return true;
     } catch (error) {
       addMessage({
-        role: 'ai',
+        role: 'assistant',
         content: fallbackMessage,
         isTextVisible: true,
       });
@@ -152,7 +222,7 @@ const InterviewPage: React.FC = () => {
         if (!isComponentMounted) return;
         
         // 最初の質問を表示
-        displayNextQuestion(true)
+        displayNextQuestion(undefined, true)
           .then(() => {
             if (!isComponentMounted) return;
             setIsAIQuestionReady(true);
@@ -212,16 +282,17 @@ const InterviewPage: React.FC = () => {
     audioRecorderRef.current?.querySelector('button')?.click();
   };
 
-  const handleStopRecording = (audioBlob?: Blob, audioUrl?: string) => {
+  const handleStopRecording = (audioBlob?: Blob, audioUrl?: string, transcript?: string) => {
     setIsRecording(false);
     
     logToFile('handleStopRecording called', {
-      transcription,
+      transcript,
+      transcriptionState: transcription,
       hasAudioBlob: !!audioBlob,
       hasAudioUrl: !!audioUrl
     });
     
-    let finalTranscription = transcription.trim();
+    const finalTranscription = (transcript ?? '').trim();
     
     if (!finalTranscription && !audioUrl) {
       setShowSpeakAgain(true);
@@ -229,11 +300,40 @@ const InterviewPage: React.FC = () => {
       return;
     }
     
-    sendResponse(finalTranscription, audioUrl);
+    // 音声入力の結果をUIに表示せずに直接APIに送信
+    processUserInput(finalTranscription, audioUrl);
+  };
+
+  // ユーザー入力を処理して次の質問を表示する共通関数
+  const processUserInput = async (text: string, audioUrl?: string) => {
+    const trimmedText = text.trim();
+    
+    logToFile('Processing user input', {
+      text: trimmedText,
+      hasAudioUrl: !!audioUrl
+    });
+    
+    if (!trimmedText) return;
+    
+    // UIを更新するためにメッセージを追加
+    addMessage({
+      role: 'user',
+      content: trimmedText,
+      audioUrl,
+      isTextVisible: true,
+    });
+    
+    // メッセージ履歴にユーザーの入力を明示的に追加してAPIに送信
+    const updatedMessages = createUpdatedMessageList({ 
+      content: trimmedText, 
+      audioUrl 
+    });
+    
+    await displayNextQuestion(updatedMessages, false, "Sorry, I didn't catch that. Please try again.");
   };
 
   const handleTranscriptionUpdate = (text: string) => {
-    logToFile('Transcription update received', { text });
+    console.log('Transcription update received', { text });
     setTranscription(text);
   };
 
@@ -242,7 +342,19 @@ const InterviewPage: React.FC = () => {
     setTranscription('');
     setShouldAutoScroll(true);
     setShowSpeakAgain(false);
-    audioRecorderRef.current?.querySelector('button')?.click();
+    
+    // キャンセルボタンをクリック
+    const cancelButton = audioRecorderRef.current?.querySelector('button:nth-child(2)') as HTMLButtonElement | null;
+    if (cancelButton) {
+      cancelButton.click(); // キャンセル用のボタンをクリック
+    } else {
+      // キャンセルボタンが見つからない場合は通常のストップボタンをクリック
+      const stopButton = audioRecorderRef.current?.querySelector('button') as HTMLButtonElement | null;
+      if (stopButton) {
+        stopButton.click();
+      }
+      logToFile('Cancel button not found, using normal stop button');
+    }
   };
 
   const toggleKeyboardMode = () => {
@@ -260,38 +372,15 @@ const InterviewPage: React.FC = () => {
   const handleTextInputSubmit = async () => {
     const trimmedText = textInput.trim();
     if (!trimmedText) return;
+    
     logToFile('Text input submitted', { trimmedText });
     setShouldAutoScroll(true);
     
-    addMessage({
-      role: 'user',
-      content: trimmedText,
-      isTextVisible: true,
-    });
-    
+    // 入力をクリア
     setTextInput('');
     
-    await displayNextQuestion(false, "Sorry, I didn't catch that. Please try again.");
-  };
-
-  const sendResponse = async (text: string, audioUrl?: string) => {
-    const trimmedText = text.trim();
-    logToFile('sendResponse called', {
-      originalText: text,
-      trimmedText,
-      hasAudioUrl: !!audioUrl
-    });
-    
-    if (!trimmedText) return;
-    
-    addMessage({
-      role: 'user',
-      content: trimmedText,
-      audioUrl,
-      isTextVisible: true,
-    });
-    
-    await displayNextQuestion(false, "Sorry, I didn't catch that. Please try again.");
+    // 共通処理を呼び出し
+    await processUserInput(trimmedText);
   };
 
   const playAIMessage = async (text: string) => {
@@ -379,17 +468,17 @@ const InterviewPage: React.FC = () => {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.role === 'ai' ? 'justify-start' : 'justify-end'}`}
+              className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
             >
               <div
                 className={`max-w-[85%] p-4 rounded-lg ${
-                  message.role === 'ai'
+                  message.role === 'assistant'
                     ? 'bg-white text-gray-800 shadow-sm'
                     : 'bg-blue-600 text-white flex flex-col gap-2'
                 }`}
-                style={{ opacity: message.role === 'ai' && isAudioLoading ? 0.7 : 1 }}
+                style={{ opacity: message.role === 'assistant' && isAudioLoading ? 0.7 : 1 }}
               >
-                {message.role === 'ai' ? (
+                {message.role === 'assistant' ? (
                   <div className="space-y-2 min-h-[2.5rem]">
                     <div className="relative min-h-[1.25rem]">
                       <p className={`${message.isTextVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}>

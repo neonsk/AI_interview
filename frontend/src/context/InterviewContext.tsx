@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface Message {
   id: string;
-  role: 'user' | 'ai';
+  role: 'user' | 'assistant';
   content: string;
   audioUrl?: string;
   isTextVisible?: boolean;
@@ -81,7 +81,7 @@ export const InterviewProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const endInterview = () => {
     setIsInterviewActive(false);
-    clearMessages(); // Clear messages when ending interview
+    // clearMessages(); // 面接終了時にメッセージをクリアしない
   };
 
   const setFeedback = (data: FeedbackData) => {

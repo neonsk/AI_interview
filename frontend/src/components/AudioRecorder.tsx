@@ -2,9 +2,48 @@ import React, { useEffect, useRef, useState } from 'react';
 import { logToFile } from '../utils/logger';
 import { interviewConfig } from '../config/interview';
 
+// Web Speech API用の型定義
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+      isFinal: boolean;
+      length: number;
+    };
+    length: number;
+  };
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+}
+
+interface Window {
+  SpeechRecognition?: {
+    new(): SpeechRecognition;
+  };
+  webkitSpeechRecognition?: {
+    new(): SpeechRecognition;
+  };
+}
+
 interface AudioRecorderProps {
   onTranscriptionUpdate: (text: string) => void;
-  onRecordingStop: (audioBlob?: Blob, audioUrl?: string) => void;
+  onRecordingStop: (audioBlob?: Blob, audioUrl?: string, transcript?: string) => void;
 }
 
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ 
@@ -20,6 +59,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const finalTranscriptRef = useRef<string>('');
   const interimTranscriptRef = useRef<string>('');
   const streamRef = useRef<MediaStream | null>(null);
+  const isCanceledRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Set up initial media stream
@@ -48,14 +88,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
   const setupRecognition = () => {
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
+      // @ts-ignore TypeScriptのエラーを無視する - 実行時にはAPI使用可能
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognitionAPI();
       
       recognition.continuous = interviewConfig.speech.continuous;
       recognition.interimResults = interviewConfig.speech.interimResults;
       recognition.lang = interviewConfig.speech.language;
       
-      recognition.onresult = (event) => {
+      // @ts-ignore TypeScriptのエラーを無視する
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         let interimTranscript = '';
         let finalTranscript = finalTranscriptRef.current;
         
@@ -80,7 +122,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         logToFile('Full transcript', { fullTranscript });
         onTranscriptionUpdate(fullTranscript);
       };
-      recognition.onerror = (event) => {
+      
+      // @ts-ignore TypeScriptのエラーを無視する
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         logToFile('Speech recognition error', { error: event.error });
       };
       
@@ -93,6 +137,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const startRecording = async () => {
     try {
       logToFile('Starting recording');
+      isCanceledRef.current = false;
+      
       if (!streamRef.current) {
         await setupMediaStream();
       }
@@ -100,6 +146,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       if (!streamRef.current) {
         throw new Error('No media stream available');
       }
+
+      // リセット処理
+      finalTranscriptRef.current = '';
+      interimTranscriptRef.current = '';
+      
+      // 音声認識の初期化
+      setupRecognition();
 
       // Set up MediaRecorder
       const recorder = new MediaRecorder(streamRef.current);
@@ -116,28 +169,31 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
-        
-        logToFile('Recording stopped', { 
-          blobSize: blob.size,
-          audioUrl: url 
-        });
-        
+        const currentTranscript = finalTranscriptRef.current;
+
         setAudioBlob(blob);
         setAudioUrl(url);
-        onRecordingStop(blob, url);
+        
+        if (!isCanceledRef.current) {
+          onRecordingStop(blob, url, currentTranscript);
+        } else {
+          logToFile('Recording was canceled, not sending results');
+        }
       };
       
       setIsRecording(true);
       setMediaRecorder(recorder);
-      finalTranscriptRef.current = '';
-      interimTranscriptRef.current = '';
       
       recorder.start();
       
-      // Start speech recognition if available
-      setupRecognition();
+      // SpeechRecognitionの開始
       if (recognitionRef.current) {
-        recognitionRef.current.start();
+        try {
+          recognitionRef.current.start();
+          logToFile('Speech recognition started');
+        } catch (err) {
+          logToFile('Error starting speech recognition', { error: err });
+        }
       }
     } catch (err) {
       console.error('Error starting recording:', err);
@@ -145,16 +201,45 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (canceled: boolean = false) => {
+    isCanceledRef.current = canceled;
+    logToFile('Stopping recording', { 
+      isCanceled: canceled,
+      currentTranscript: finalTranscriptRef.current
+    });
+    
     if (mediaRecorder && isRecording) {
-      logToFile('Stopping recording');
+      // 現在のトランスクリプトを保存
+      const savedFinalTranscript = finalTranscriptRef.current;
       
-      // 音声認識の停止を遅延させて、最後の認識結果を確実に取得
-      const finalTranscript = (finalTranscriptRef.current + ' ' + interimTranscriptRef.current).trim();
-      logToFile('Final transcript before stopping', { finalTranscript });
-      onTranscriptionUpdate(finalTranscript);
-
-      // 音声認識を先に停止
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.onend = function() {
+            logToFile('Speech recognition ended normally');
+            if (mediaRecorder.state === 'recording') {
+              mediaRecorder.stop();
+            }
+            setIsRecording(false);
+          };
+          
+          recognitionRef.current.stop();
+        } catch (err) {
+          logToFile('Error stopping recognition', { error: err });
+          // 認識エラーの場合でもレコーダーを停止
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+          setIsRecording(false);
+        }
+      } else {
+        // 音声認識がない場合は単純にレコーダーを停止
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+        setIsRecording(false);
+      }
+    } else {
+      setIsRecording(false);
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -162,21 +247,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           logToFile('Error stopping recognition', { error: err });
         }
       }
-
-      // 少し待ってからMediaRecorderを停止
-      setTimeout(() => {
-        mediaRecorder.stop();
-        setIsRecording(false);
-      }, 100);
-    } else {
-      setIsRecording(false);
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch (err) {
-            logToFile('Error stopping recognition', { error: err });
-          }
-        }
     }
   };
 
@@ -188,10 +258,17 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   };
 
+  const cancelRecording = () => {
+    stopRecording(true);
+  };
+
   return (
     <div className="hidden">
       <button onClick={toggleRecording}>
         {isRecording ? 'Stop Recording' : 'Start Recording'}
+      </button>
+      <button onClick={cancelRecording}>
+        Cancel Recording
       </button>
     </div>
   );

@@ -46,7 +46,7 @@ export const getMockFeedback = (messages: Message[]): FeedbackData => {
       "業界特有の表現や専門用語の使用例を学習しましょう"
     ],
     detailedFeedback: messages.reduce((acc: any[], message, index) => {
-      if (message.role === 'ai') {
+      if (message.role === 'assistant') {
         const userResponse = messages[index + 1];
         if (userResponse && userResponse.role === 'user') {
           acc.push({
