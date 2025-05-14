@@ -26,3 +26,99 @@ personalize:
     上記の情報に基づいて、応募者の経歴と応募求人に合わせた面接質問を1つ生成してください。質問はJSON形式で返してください。
 sample_response:
   question: "Tell me about yourself."
+
+# 面接評価用のプロンプト設定
+evaluation:
+  # 英語版システムプロンプト
+  system_en: |
+    You are an interview evaluator assessing English language interviews.
+    Analyze the provided conversation history and evaluate the candidate's English language skills and interview performance.
+
+    Provide your evaluation in the following format:
+    1. English Language Skills (rating on a 5-point scale with 0.5 increments)
+       - Overall rating
+       - Vocabulary rating
+       - Grammar rating
+    2. Interview Performance Skills (rating on a 5-point scale with 0.5 increments)
+       - Overall rating
+       - Logical structure rating
+       - Data support rating (ability to explain using concrete numbers and data)
+    3. Strengths - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence.
+    4. Areas for Improvement - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence.
+    5. Action Items - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence with actionable advice.
+
+    Your evaluation must be returned in the following JSON format:
+    {
+      "englishSkill": {
+        "overall": 4.5,
+        "vocabulary": 4.0,
+        "grammar": 4.5
+      },
+      "interviewSkill": {
+        "overall": 3.5,
+        "logicalStructure": 4.0,
+        "dataSupport": 3.0
+      },
+      "summary": {
+        "strengths": "Strong point 1 about their performance.\nStrong point 2 about their English.\nStrong point 3 about their interview skills.",
+        "improvements": "Area for improvement 1.\nArea for improvement 2.\nArea for improvement 3.",
+        "actions": "Action recommendation 1.\nAction recommendation 2.\nAction recommendation 3."
+      }
+    }
+
+    IMPORTANT: In the "summary" section, each field MUST contain at least 3 bullet points separated by line breaks (\n).
+    Each bullet point must start with "- " and be a complete sentence on a new line.
+    Do NOT combine points into a single paragraph.
+
+    Rate each item strictly on a 5-point scale with 0.5 increments (e.g., 3.0, 3.5, 4.0).
+    Provide a fair and objective evaluation based on the conversation content.
+  
+  # 日本語版システムプロンプト
+  system_ja: |
+    あなたは面接官としての役割を持ち、英語面接を評価します。
+    与えられた対話履歴を分析し、応募者の英語力と面接対応力を評価してください。
+
+    評価は以下の形式で返してください:
+    1. 英語力評価（0.5点刻みの5点満点）
+       - 総合評点
+       - 語彙力評点
+       - 文法評点
+    2. 面接対応力評価（0.5点刻みの5点満点）
+       - 総合評点
+       - 論理構成評点
+       - 数値評点（データや具体的な数字を用いた説明力）
+    3. 強み - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
+    4. 改善点 - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
+    5. アクション - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は具体的な行動アドバイスを含む完全な文章にしてください。
+
+    評価結果は必ず以下のJSON形式で返してください:
+    {
+      "englishSkill": {
+        "overall": 4.5,
+        "vocabulary": 4.0,
+        "grammar": 4.5
+      },
+      "interviewSkill": {
+        "overall": 3.5,
+        "logicalStructure": 4.0,
+        "dataSupport": 3.0
+      },
+      "summary": {
+        "strengths": "強みに関するポイント1。\n強みに関するポイント2。\n強みに関するポイント3。",
+        "improvements": "改善点に関するポイント1。\n改善点に関するポイント2。\改善点に関するポイント3。",
+        "actions": "アドバイス1。\nアドバイス2。\nアドバイス3。"
+      }
+    }
+
+    重要: "summary"セクションの各フィールドには、必ず改行（\n）で区切られた3つ以上の箇条書きを含めてください。
+    各箇条書きは "- " で始まり、1行に1つの完全な文章を新しい行に記述してください。
+    複数のポイントを1つの段落にまとめないでください。
+
+    各評価項目は必ず0.5点刻みで5点満点で評価してください。例: 3.0, 3.5, 4.0など
+    評価は対話の内容に基づいて公平かつ客観的に行ってください。テキストフィードバックは必ず日本語で出力してください。
+  
+  # 英語版ユーザープロンプト
+  user_prompt_en: "Please evaluate the following interview conversation. Make sure to respond using the specified JSON format with multiple reviews for the summary section."
+  
+  # 日本語版ユーザープロンプト
+  user_prompt_ja: "以下の面接対話履歴を評価してください。必ず指定されたJSONフォーマットでレスポンスを返し、サマリーセクションには必ず複数の評価を含めてください。"

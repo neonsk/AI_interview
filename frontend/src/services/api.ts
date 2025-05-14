@@ -34,6 +34,25 @@ interface TextToSpeechRequest {
   voice?: string;
 }
 
+// 面接評価レスポンスの型定義
+interface EvaluationResponse {
+  englishSkill: {
+    overall: number;
+    vocabulary: number;
+    grammar: number;
+  };
+  interviewSkill: {
+    overall: number;
+    logicalStructure: number;
+    dataSupport: number;
+  };
+  summary: {
+    strengths: string;
+    improvements: string;
+    actions: string;
+  };
+}
+
 // インタビュー関連のAPI
 export const interviewApi = {
   // 一般的な質問を生成
@@ -91,6 +110,27 @@ export const interviewApi = {
       return response.data;
     } catch (error) {
       logToFile('Error generating speech', { error });
+      throw error;
+    }
+  },
+
+  // 面接の評価を取得
+  async evaluateInterview(messageHistory: Message[], language: string = "en"): Promise<EvaluationResponse> {
+    try {
+      logToFile('Requesting interview evaluation', { messageHistoryLength: messageHistory.length, language });
+      
+      const response = await axios.post<EvaluationResponse>(
+        `${API_BASE_URL}/api/interview/evaluation`,
+        { 
+          message_history: messageHistory,
+          language
+        }
+      );
+      
+      logToFile('Evaluation received successfully');
+      return response.data;
+    } catch (error) {
+      logToFile('Error evaluating interview', { error });
       throw error;
     }
   },

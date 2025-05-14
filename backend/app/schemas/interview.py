@@ -28,3 +28,42 @@ class InterviewQuestionResponse(BaseModel):
 class TextToSpeechRequest(BaseModel):
     text: str = Field(..., description="音声に変換するテキスト")
     voice: Optional[str] = Field(default="alloy", description="使用する音声タイプ") 
+
+
+# 面接評価リクエスト用のスキーマ
+class InterviewEvaluationRequest(BaseModel):
+    """面接評価リクエスト"""
+    message_history: List[Dict[str, Any]] = Field(..., description="面接の対話履歴")
+    language: str = Field(default="en", description="言語設定（en/ja）")
+
+
+# 面接評価レスポンス用のスキーマ
+class InterviewEvaluationResponse(BaseModel):
+    """面接評価レスポンス"""
+    englishSkill: Dict[str, float] = Field(
+        ..., 
+        description="英語力評価（総合・語彙力・文法）",
+        example={
+            "overall": 4.5,
+            "vocabulary": 4.0,
+            "grammar": 4.5
+        }
+    )
+    interviewSkill: Dict[str, float] = Field(
+        ..., 
+        description="面接対応力評価（総合・論理構成・数値）",
+        example={
+            "overall": 3.5,
+            "logicalStructure": 4.0,
+            "dataSupport": 3.0
+        }
+    )
+    summary: Dict[str, str] = Field(
+        ..., 
+        description="総合評価（強み・改善点・アクション）",
+        example={
+            "strengths": "論理的な説明ができており、具体例を適切に使用しています。",
+            "improvements": "専門用語の使い方に若干の誤りがあります。",
+            "actions": "業界固有の専門用語をより正確に使えるように学習しましょう。"
+        }
+    ) 

@@ -170,4 +170,116 @@ class OpenAIService:
             
         except Exception as e:
             logger.error(f"音声合成中にエラーが発生しました: {str(e)}")
-            raise Exception(f"音声合成エラー: {str(e)}") 
+            raise Exception(f"音声合成エラー: {str(e)}")
+    
+    async def evaluate_interview(self, message_history: List[Dict[str, Any]], language: str = "en") -> Dict[str, Any]:
+        """面接の対話履歴を評価する
+        
+        Args:
+            message_history: 面接の対話履歴
+            language: 言語設定（en/ja）
+            
+        Returns:
+            Dict[str, Any]: 評価結果
+        """
+        try:
+            # プロンプトファイルの読み込み
+            prompt_path = settings.INTERVIEW_QUESTIONS_PROMPT_PATH
+            prompt_data = await self._load_prompt(prompt_path)
+            
+            # 評価用のプロンプト設定を取得
+            evaluation_config = prompt_data.get("evaluation", {})
+            
+            # 言語に応じたプロンプト選択
+            if language.lower() == "ja":
+                system_prompt = evaluation_config.get("system_ja", "")
+            else:
+                system_prompt = evaluation_config.get("system_en", "")
+            
+            # プロンプトが空の場合はエラー
+            if not system_prompt:
+                raise ValueError(f"評価用のシステムプロンプトが設定されていません（言語: {language}）")
+            
+            # メッセージ履歴を構築
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # 対話履歴を追加
+            if language.lower() == "ja":
+                user_prompt = evaluation_config.get("user_prompt_ja", "以下の面接対話履歴を評価してください。必ず指定されたJSONフォーマットでレスポンスを返してください。")
+                user_prompt += "\n\n対話履歴:\n"
+            else:
+                user_prompt = evaluation_config.get("user_prompt_en", "Please evaluate the following interview conversation. Make sure to respond using the specified JSON format.")
+                user_prompt += "\n\nConversation history:\n"
+            
+            # 対話履歴をフォーマット
+            formatted_history = []
+            for i, msg in enumerate(message_history):
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if language.lower() == "ja":
+                    role_name = "面接官" if role == "assistant" else "応募者"
+                else:
+                    role_name = "Interviewer" if role == "assistant" else "Candidate"
+                formatted_history.append(f"{i+1}. {role_name}: {content}")
+            
+            user_prompt += "\n".join(formatted_history)
+            messages.append({"role": "user", "content": user_prompt})
+            
+            # リクエスト前にモデルとメッセージの内容をログ出力
+            logger.info(f"面接評価リクエスト（言語: {language}）")
+            logger.info(f"使用モデル: {self.model}")
+            logger.info(f"メッセージ数: {len(messages)}")
+            logger.info(f"メッセージ内容: {json.dumps(messages, ensure_ascii=False, indent=2)}")
+            
+            # OpenAI APIを呼び出して評価を生成
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.3,  # 評価なので低めの温度設定
+                max_tokens=1000,
+                response_format={"type": "json_object"}
+            )
+            
+            # レスポンスの処理
+            content = response.choices[0].message.content
+            
+            try:
+                # JSONパース
+                evaluation = json.loads(content)
+                
+                # 必要なフィールドが存在するか確認
+                required_fields = ["englishSkill", "interviewSkill", "summary"]
+                for field in required_fields:
+                    if field not in evaluation:
+                        raise ValueError(f"評価結果に{field}フィールドがありません")
+                
+                # 各サブフィールドも確認
+                if not all(key in evaluation["englishSkill"] for key in ["overall", "vocabulary", "grammar"]):
+                    raise ValueError("englishSkillに必要なフィールドがありません")
+                
+                if not all(key in evaluation["interviewSkill"] for key in ["overall", "logicalStructure", "dataSupport"]):
+                    raise ValueError("interviewSkillに必要なフィールドがありません")
+                
+                if not all(key in evaluation["summary"] for key in ["strengths", "improvements", "actions"]):
+                    raise ValueError("summaryに必要なフィールドがありません")
+                
+                # 言語情報を追加
+                evaluation["language"] = language
+                
+                # サマリー部分のログ出力（改行の確認用）
+                logger.info(
+                    f"評価結果（サマリー）:\n" +
+                    f"strengths=\n{evaluation['summary']['strengths']}\n" +
+                    f"improvements=\n{evaluation['summary']['improvements']}\n" + 
+                    f"actions=\n{evaluation['summary']['actions']}"
+                )
+                
+                return evaluation
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"評価結果のJSONパースに失敗しました: {str(e)}")
+                raise ValueError(f"評価結果のJSONパースに失敗しました: {str(e)}")
+                
+        except Exception as e:
+            logger.error(f"面接評価中にエラーが発生しました: {str(e)}")
+            raise Exception(f"面接評価エラー: {str(e)}") 

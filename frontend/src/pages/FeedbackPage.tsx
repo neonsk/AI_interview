@@ -5,18 +5,51 @@ import { ArrowLeft, ExternalLink, Lock, HelpCircle } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useInterview, FeedbackData } from '../context/InterviewContext';
 import Button from '../components/Button';
+import { interviewApi } from '../services/api';
 
 const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { feedback } = useInterview();
+  const { t, i18n } = useTranslation();
+  const { feedback, messages, updateFeedback } = useInterview();
   const [activeTab, setActiveTab] = useState<'summary' | 'details'>('summary');
 
   useEffect(() => {
     if (!feedback) {
       navigate('/');
+    } else if (activeTab === 'summary' && messages.length > 0 && !feedback.evaluation && !feedback.isEvaluating) {
+      // 評価データが未取得の場合は評価処理を開始
+      fetchEvaluation();
     }
-  }, [feedback, navigate]);
+  }, [feedback, navigate, activeTab, messages]);
+
+  const fetchEvaluation = async () => {
+    if (!messages.length) return;
+    
+    try {
+      // 評価中フラグをセット
+      updateFeedback({ isEvaluating: true });
+      
+      // 現在の言語設定を取得
+      const currentLanguage = i18n.language;
+      
+      // メッセージを評価APIに送信
+      const messageHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      const evaluation = await interviewApi.evaluateInterview(messageHistory, currentLanguage);
+      
+      // 評価結果を保存
+      updateFeedback({ 
+        evaluation,
+        isEvaluating: false 
+      });
+    } catch (error) {
+      console.error('評価取得エラー:', error);
+      updateFeedback({ isEvaluating: false });
+    }
+  };
 
   if (!feedback) {
     return null;
@@ -122,6 +155,115 @@ const renderStars = (score: number) => {
 
 const SummaryTab: React.FC<{ feedback: FeedbackData; navigate: (path: string) => void }> = ({ feedback, navigate }) => {
   const { t } = useTranslation();
+
+  // 評価中の場合はローディング表示
+  if (feedback.isEvaluating) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-lg text-gray-700">{t('feedback.evaluating')}</p>
+        <p className="text-sm text-gray-500 mt-2">{t('feedback.evaluatingDescription')}</p>
+      </div>
+    );
+  }
+
+  // 新しい評価APIのデータがある場合
+  if (feedback.evaluation) {
+    const { englishSkill, interviewSkill, summary } = feedback.evaluation;
+    
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">{t('feedback.performance.english')}</h2>
+              <div className="flex items-center gap-3">
+                {renderStars(englishSkill.overall)}
+                <span className="text-2xl font-bold text-blue-600">{englishSkill.overall.toFixed(1)}</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <ScoreBreakdown
+                title={t('feedback.performance.vocabulary.title')}
+                tooltip={t('feedback.performance.vocabulary.description')}
+                score={englishSkill.vocabulary}
+                color="blue"
+              />
+              <ScoreBreakdown
+                title={t('feedback.performance.grammar.title')}
+                tooltip={t('feedback.performance.grammar.description')}
+                score={englishSkill.grammar}
+                color="blue"
+              />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">{t('feedback.performance.interview')}</h2>
+              <div className="flex items-center gap-3">
+                {renderStars(interviewSkill.overall)}
+                <span className="text-2xl font-bold text-green-600">{interviewSkill.overall.toFixed(1)}</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <ScoreBreakdown
+                title={t('feedback.performance.structure.title')}
+                tooltip={t('feedback.performance.structure.description')}
+                score={interviewSkill.logicalStructure}
+                color="green"
+              />
+              <ScoreBreakdown
+                title={t('feedback.performance.logic.title')}
+                tooltip={t('feedback.performance.logic.description')}
+                score={interviewSkill.dataSupport}
+                color="green"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="max-w-xl mx-auto px-4 py-4">
+            <Button
+              variant="primary"
+              size="medium"
+              onClick={() => navigate('/pricing')}
+              className="w-full bg-blue-500 hover:bg-blue-600 transition-all duration-200"
+            >
+              <div className="flex flex-col items-center">
+                <span>{t('feedback.viewPricingPlans')}</span>
+                <span className="text-sm text-blue-100">{t('feedback.extendedInterviewNotice')}</span>
+              </div>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <FeedbackSection
+            title={t('feedback.strengths')}
+            items={summary.strengths.split('\n').filter(line => line.trim().length > 0)}
+            icon="+"
+            color="green"
+          />
+          <FeedbackSection
+            title={t('feedback.improvements')}
+            items={summary.improvements.split('\n').filter(line => line.trim().length > 0)}
+            icon="△"
+            color="orange"
+          />
+          <FeedbackSection
+            title={t('feedback.actionItems')}
+            items={summary.actions.split('\n').filter(line => line.trim().length > 0)}
+            icon="→"
+            color="blue"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 旧データ形式を使用
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -285,67 +427,6 @@ const FeedbackSection: React.FC<{
           </li>
         ))}
       </ul>
-    </div>
-  );
-};
-
-const PerformanceCard: React.FC<{
-  title: string;
-  score: number;
-  strengths: string[];
-  improvements: string[];
-  actionItems: string[];
-}> = ({ title, score, strengths, improvements, actionItems }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="p-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-          <div className="flex items-center space-x-2">
-            {renderStars(score)}
-            <span className="text-lg font-semibold text-gray-900">{score.toFixed(1)}/5.0</span>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <section>
-            <h3 className="text-green-600 font-semibold mb-3">{t('feedback.strengths')}</h3>
-            <ul className="space-y-2">
-              {strengths.map((strength, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-green-500 mr-2">+</span>
-                  <span>{strength}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-orange-600 font-semibold mb-3">{t('feedback.improvements')}</h3>
-            <ul className="space-y-2">
-              {improvements.map((improvement, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-orange-500 mr-2">△</span>
-                  <span>{improvement}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-blue-600 font-semibold mb-3">{t('feedback.actionItems')}</h3>
-            <ul className="space-y-2">
-              {actionItems.map((item, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="text-blue-500 mr-2">→</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </div>
     </div>
   );
 };

@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from typing import Dict, List, Any
 from pydantic import BaseModel
 
-from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest
+from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest, InterviewEvaluationRequest, InterviewEvaluationResponse
 from app.services.openai_service import OpenAIService
 from app.core.logger import setup_logger
 from app.core.config import InterviewMode
@@ -87,4 +87,22 @@ async def text_to_speech(request: TextToSpeechRequest):
         )
     except Exception as e:
         logger.error(f"音声合成エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/evaluation", response_model=InterviewEvaluationResponse)
+async def evaluate_interview(request: InterviewEvaluationRequest):
+    """面接の対話履歴を評価する"""
+    try:
+        logger.info(f"面接評価リクエスト: message_history={len(request.message_history)}件, language={request.language}")
+        
+        # OpenAI APIを使用して評価を生成
+        evaluation = await openai_service.evaluate_interview(
+            request.message_history,
+            language=request.language
+        )
+        logger.info(f"生成された評価: {evaluation}")
+        
+        return evaluation
+    except Exception as e:
+        logger.error(f"面接評価エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

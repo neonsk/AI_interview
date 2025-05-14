@@ -83,7 +83,7 @@ const PricingPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Plus Plan */}
+          {/* Lite Plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -91,7 +91,7 @@ const PricingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900">Plus</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Lite</h2>
               <div className="h-8 mb-8" />
               <ul className="space-y-4">
                 <PricingItem 

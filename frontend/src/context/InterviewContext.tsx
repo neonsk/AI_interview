@@ -31,6 +31,24 @@ export interface FeedbackData {
     interviewFeedback: string;
     idealAnswer: string;
   }[];
+  evaluation?: {
+    englishSkill: {
+      overall: number;
+      vocabulary: number;
+      grammar: number;
+    };
+    interviewSkill: {
+      overall: number;
+      logicalStructure: number;
+      dataSupport: number;
+    };
+    summary: {
+      strengths: string;
+      improvements: string;
+      actions: string;
+    };
+  };
+  isEvaluating?: boolean;
 }
 
 interface InterviewContextType {
@@ -43,6 +61,7 @@ interface InterviewContextType {
   endInterview: () => void;
   setFeedback: (data: FeedbackData) => void;
   toggleMessageVisibility: (id: string) => void;
+  updateFeedback: (updates: Partial<FeedbackData>) => void;
 }
 
 const InterviewContext = createContext<InterviewContextType | undefined>(undefined);
@@ -88,6 +107,10 @@ export const InterviewProvider: React.FC<{ children: ReactNode }> = ({ children 
     setFeedbackState(data);
   };
 
+  const updateFeedback = (updates: Partial<FeedbackData>) => {
+    setFeedbackState(prev => prev ? { ...prev, ...updates } : null);
+  };
+
   const toggleMessageVisibility = (id: string) => {
     setMessages(prev => prev.map(message => 
       message.id === id 
@@ -108,6 +131,7 @@ export const InterviewProvider: React.FC<{ children: ReactNode }> = ({ children 
         endInterview,
         setFeedback,
         toggleMessageVisibility,
+        updateFeedback,
       }}
     >
       {children}

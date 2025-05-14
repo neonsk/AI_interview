@@ -1,6 +1,6 @@
 {
   "common": {
-    "startPractice": "Start Practicing Now",
+    "startPractice": "Practice Now",
     "endInterview": "End Interview",
     "viewFeedback": "View Feedback",
     "send": "Send",
@@ -21,11 +21,11 @@
     },
     "background": {
       "label": "Background",
-      "placeholder": "Enter your work history and experience"
+      "placeholder": "Enter your work experience and background"
     },
     "position": {
       "label": "Target Position",
-      "placeholder": "Enter the position and industry you're applying for"
+      "placeholder": "Enter the job position or industry you're applying for"
     },
     "startButton": "Start Interview"
   },
@@ -38,13 +38,15 @@
     },
     "complete": {
       "title": "Interview Complete",
-      "message": "The interview session has ended. Would you like to review your feedback?"
+      "message": "Your interview session is complete. Would you like to view your feedback?"
     }
   },
   "feedback": {
     "title": "Results",
-    "subtitle": "Review your performance and get personalized feedback to improve your interview skills.",
-    "pricingNotice": "The following are the plans and features we are currently considering. Pricing and additional features for each plan will be determined in the future.",
+    "subtitle": "Review your interview performance and personalized feedback.",
+    "pricingNotice": "The following are the current planned features by subscription tier. Pricing and additional features will be determined in the future.",
+    "evaluating": "Evaluating...",
+    "evaluatingDescription": "AI is analyzing your interview. This will only take a moment.",
     "performance": {
       "english": "English Skills",
       "interview": "Interview Skills",
@@ -58,7 +60,7 @@
       },
       "structure": {
         "title": "Structure",
-        "description": "Logical organization of responses based on STAR/CAR format"
+        "description": "Logical organization of responses based on STAR/CAR framework"
       },
       "logic": {
         "title": "Quantitative Evidence",
@@ -71,7 +73,7 @@
       "details": "Details"
     },
     "strengths": "Strengths",
-    "improvements": "Areas to Improve",
+    "improvements": "Areas for Improvement",
     "actionItems": "Action Items",
     "question": "Question {{number}}",
     "yourAnswer": "Your Answer",
@@ -79,45 +81,45 @@
     "interviewFeedback": "Feedback on Interview Skills",
     "idealAnswer": "Ideal Answer",
     "noData": "No feedback data available",
-    "viewPricingPlans": "View Subscription Plans",
-    "premiumFeatureNotice": "Upgrade to access all feedback details",
-    "extendedInterviewNotice": "Upgrade for interviews over 3 minutes"
+    "viewPricingPlans": "View Pricing Plans",
+    "premiumFeatureNotice": "Upgrade to access all feedback",
+    "extendedInterviewNotice": "Premium plans allow interviews over 3 minutes"
   },
   "home": {
     "hero": {
-      "title": "Master Your English Interview Skills with AI",
-      "subtitle": "Practice interviews anytime, anywhere with our AI-powered platform to improve your English and interview skills."
+      "title": "Master English Interviews with AI",
+      "subtitle": "An AI-powered English interview practice platform. Practice anytime, as often as you need, to improve your English and interview skills."
     },
     "features": {
       "title": "Key Features",
-      "subtitle": "Comprehensive evaluation and feedback for effective interview preparation",
+      "subtitle": "Comprehensive AI evaluation and feedback for effective interview preparation",
       "anytime": {
-        "title": "Practice Anytime, Anywhere",
-        "description": "Available 24/7, practice as many times as you want with no limitations"
+        "title": "Anytime, Any Frequency",
+        "description": "Practice 24/7, 365 days a year at your convenience. No limits on practice sessions."
       },
       "evaluation": {
-        "title": "English & Interview Skills",
-        "description": "AI evaluates pronunciation, grammar, vocabulary, and response quality with detailed feedback"
+        "title": "English × Interview Skills",
+        "description": "AI comprehensively evaluates pronunciation, grammar, vocabulary, as well as response logic and persuasiveness."
       },
       "personalized": {
-        "title": "Personalized Learning",
-        "description": "Questions tailored to your experience and target industry, with analysis of past practice data"
+        "title": "Personalized Experience",
+        "description": "Questions tailored to your experience and target industry. Analysis of past practice data to suggest effective learning approaches."
       }
     },
     "learning": {
-      "title": "Learning Process",
-      "subtitle": "Three simple steps to improve your interview skills",
+      "title": "How to Learn",
+      "subtitle": "A simple 3-step process for effective interview preparation",
       "step1": {
         "title": "Start Interview Practice",
-        "description": "One-on-one practice with AI in a realistic interview environment"
+        "description": "One-on-one practice with AI in a simulated interview environment. Voice recognition enables natural conversation."
       },
       "step2": {
         "title": "Detailed Feedback",
-        "description": "Comprehensive evaluation of both English and interview performance"
+        "description": "Comprehensive evaluation of both English and interview skills. Specific improvement points and model answers provided."
       },
       "step3": {
         "title": "Continuous Improvement",
-        "description": "Target your weaknesses and practice repeatedly to improve skills"
+        "description": "Identify weaknesses and engage in targeted practice to steadily improve your skills."
       }
     }
   }
