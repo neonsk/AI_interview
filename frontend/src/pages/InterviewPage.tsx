@@ -42,10 +42,16 @@ const InterviewPage: React.FC = () => {
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'end'
-      });
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end'
+        });
+        
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 10);
     }
   };
 
@@ -179,6 +185,11 @@ const InterviewPage: React.FC = () => {
         isTextVisible: true,
       });
       
+      // メッセージ追加後に強制的にスクロール
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+      
       scrollToBottom();
       setIsLoading(false);
       return true;
@@ -188,6 +199,11 @@ const InterviewPage: React.FC = () => {
         content: fallbackMessage,
         isTextVisible: true,
       });
+      
+      // メッセージ追加後に強制的にスクロール
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
       
       scrollToBottom();
       setIsLoading(false);
@@ -207,6 +223,8 @@ const InterviewPage: React.FC = () => {
         setIsAudioLoading(false);
         setIsAnyAudioPlaying(false);
         setIsPlaying(null);
+        // 音声再生終了時にスクロールを最下部に移動
+        scrollToBottom();
       };
       
       audio.onerror = (error) => {
@@ -342,17 +360,12 @@ const InterviewPage: React.FC = () => {
     }
   }, [timeRemaining]);
 
+  // 重複したuseEffectを1つに統合
   useEffect(() => {
     if (shouldAutoScroll && !isUserScrolling) {
       scrollToBottom();
     }
-  }, [messages, isLoading, transcription, isRecording]);
-
-  useEffect(() => {
-    if (shouldAutoScroll && !isUserScrolling) {
-      scrollToBottom();
-    }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, transcription, isRecording, isPlaying, isAnyAudioPlaying, audioElements]);
 
   const handleEndInterview = () => {
     const mockFeedback = getMockFeedback(messages);
@@ -407,6 +420,11 @@ const InterviewPage: React.FC = () => {
       audioUrl,
       isTextVisible: true,
     });
+    
+    // メッセージ追加後に強制的にスクロール
+    setTimeout(() => {
+      scrollToBottom();
+    }, 50);
     
     // メッセージ履歴にユーザーの入力を明示的に追加してAPIに送信
     const updatedMessages = createUpdatedMessageList({ 
@@ -475,6 +493,14 @@ const InterviewPage: React.FC = () => {
     
     // 再生中のメッセージIDを更新（null: どのメッセージも再生していない）
     setIsPlaying(messageId);
+    
+    // 音声再生が停止したらスクロールを最下部に移動
+    if (!playing && messageId === null) {
+      // 少し遅延させてDOMが更新された後にスクロール
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+    }
     
     // ログ出力
     if (playing && messageId) {
@@ -621,6 +647,8 @@ const InterviewPage: React.FC = () => {
       audio.onended = () => {
         setPlayingUserAudio(null);
         setIsAnyAudioPlaying(false);
+        // 音声再生完了時にスクロールを最下部に移動
+        scrollToBottom();
       };
       
       // エラー発生時のイベントリスナーを設定
@@ -659,7 +687,7 @@ const InterviewPage: React.FC = () => {
 
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-6 pb-32 scrollbar-visible mb-24"
+        className="flex-1 overflow-y-auto px-4 py-6 pb-24 scrollbar-visible mb-28"
         onScroll={handleScroll}
         onTouchStart={handleScrollStart}
         onMouseDown={handleScrollStart}
@@ -668,7 +696,7 @@ const InterviewPage: React.FC = () => {
           scrollbarColor: '#CBD5E1 #F1F5F9'
         }}
       >
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-6 mb-4">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -779,7 +807,7 @@ const InterviewPage: React.FC = () => {
             </div>
           )}
           
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-2" />
         </div>
       </div>
 
