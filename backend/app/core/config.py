@@ -33,6 +33,9 @@ OPENAI_TTS_RESPONSE_FORMAT = "mp3"
 # 利用可能な音声タイプ
 OPENAI_TTS_AVAILABLE_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
 
+# フィードバック表示設定
+FREE_DETAILED_FEEDBACK_COUNT = int(os.getenv("FREE_DETAILED_FEEDBACK_COUNT", "1"))
+
 # デフォルトの質問生成パラメータ
 DEFAULT_INTERVIEW_PARAMS = {
     "max_tokens": 300,
@@ -59,6 +62,9 @@ class Settings(BaseSettings):
     OPENAI_TTS_VOICE: str = Field(default=OPENAI_TTS_VOICE)
     OPENAI_TTS_RESPONSE_FORMAT: str = Field(default=OPENAI_TTS_RESPONSE_FORMAT)
     OPENAI_TTS_AVAILABLE_VOICES: List[str] = Field(default=OPENAI_TTS_AVAILABLE_VOICES)
+    
+    # フィードバック表示設定
+    FREE_DETAILED_FEEDBACK_COUNT: int = Field(default=FREE_DETAILED_FEEDBACK_COUNT, description="無料ユーザーに表示する詳細フィードバックの件数")
     
     # ファイルパス設定
     PROMPTS_DIR: str = Field(default=PROMPTS_DIR)

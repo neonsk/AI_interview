@@ -282,4 +282,113 @@ class OpenAIService:
                 
         except Exception as e:
             logger.error(f"面接評価中にエラーが発生しました: {str(e)}")
-            raise Exception(f"面接評価エラー: {str(e)}") 
+            raise Exception(f"面接評価エラー: {str(e)}")
+
+    async def generate_detailed_feedback(
+        self, qa_list: List[Dict[str, str]], max_feedback_count: int = 1, language: str = "en"
+    ) -> List[Optional[Dict[str, str]]]:
+        """
+        面接のQ&Aごとに詳細なフィードバックを生成する
+        
+        Args:
+            qa_list: 質問と回答のリスト
+            max_feedback_count: フィードバックを生成する最大QA数
+            language: 言語設定（en/ja）
+            
+        Returns:
+            各QAの評価結果のリスト（英語力フィードバック、面接対応力フィードバック、理想的な回答）
+        """
+        try:
+            # QAリストの範囲チェック
+            if not qa_list:
+                logger.error("QAリストが空です")
+                return []
+                
+            # 評価結果を格納するリスト
+            results = []
+            
+            # プロンプトファイルの読み込み
+            prompt_path = settings.INTERVIEW_QUESTIONS_PROMPT_PATH
+            prompt_data = await self._load_prompt(prompt_path)
+            
+            # 詳細フィードバック用のプロンプト設定を取得
+            detailed_feedback_config = prompt_data.get("detailed_feedback", {})
+            
+            # 言語に応じたシステムプロンプト選択
+            if language.lower() == "ja":
+                system_prompt = detailed_feedback_config.get("system_ja", "")
+                user_prompt_template = detailed_feedback_config.get("user_prompt_ja", "")
+            else:
+                system_prompt = detailed_feedback_config.get("system_en", "")
+                user_prompt_template = detailed_feedback_config.get("user_prompt_en", "")
+            
+            # プロンプトが空の場合はエラー
+            if not system_prompt:
+                raise ValueError(f"詳細フィードバック用のシステムプロンプトが設定されていません（言語: {language}）")
+            
+            # 各QAペアを評価
+            logger.info(f"詳細フィードバック生成リクエスト（言語: {language}, QA数: {len(qa_list)}）")
+            for i, qa in enumerate(qa_list):
+                # 最大フィードバック数を超えた場合はNoneを追加
+                if i >= max_feedback_count:
+                    results.append(None)
+                    continue
+                    
+                question = qa.get("question", "")
+                answer = qa.get("answer", "")
+                
+                # 質問または回答が空の場合はスキップ
+                if not question or not answer:
+                    logger.warning(f"質問または回答が空です: index={i}")
+                    results.append(None)
+                    continue
+                
+                # ユーザープロンプトの作成
+                user_prompt = user_prompt_template.format(
+                    question=question,
+                    answer=answer
+                )
+                
+                # APIリクエストの準備
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+                
+                # リクエスト前にログ出力
+                logger.info(f"詳細フィードバック生成リクエスト（言語: {language}, QA index: {i}）")
+                
+                # OpenAI APIを呼び出してフィードバックを生成
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=1000,
+                    response_format={"type": "json_object"}
+                )
+                
+                # レスポンスの処理
+                content = response.choices[0].message.content
+                
+                try:
+                    # JSONパース
+                    feedback = json.loads(content)
+                    
+                    # 必要なフィールドが存在するか確認
+                    required_fields = ["englishFeedback", "interviewFeedback", "idealAnswer"]
+                    for field in required_fields:
+                        if field not in feedback:
+                            raise ValueError(f"フィードバック結果に{field}フィールドがありません")
+                    
+                    # 結果を追加
+                    results.append(feedback)
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"フィードバック結果のJSONパースに失敗しました: {str(e)}")
+                    results.append(None)
+            
+            return results
+                
+        except Exception as e:
+            logger.error(f"詳細フィードバック生成中にエラーが発生しました: {str(e)}")
+            raise Exception(f"詳細フィードバックエラー: {str(e)}") 

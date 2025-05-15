@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from typing import Dict, List, Any
 from pydantic import BaseModel
 
-from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest, InterviewEvaluationRequest, InterviewEvaluationResponse
+from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest, InterviewEvaluationRequest, InterviewEvaluationResponse, DetailedFeedbackRequest, DetailedFeedbackResponse, FeedbackQA, FeedbackEvaluation
 from app.services.openai_service import OpenAIService
 from app.core.logger import setup_logger
 from app.core.config import InterviewMode
@@ -105,4 +105,27 @@ async def evaluate_interview(request: InterviewEvaluationRequest):
         return evaluation
     except Exception as e:
         logger.error(f"面接評価エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/detailed-feedback", response_model=DetailedFeedbackResponse)
+async def get_detailed_feedback(request: DetailedFeedbackRequest):
+    """面接のQAペアごとに詳細なフィードバックを生成する"""
+    try:
+        logger.info(f"詳細フィードバックリクエスト: qa_count={len(request.qa_list)}件, max_feedback_count={request.max_feedback_count}, language={request.language}")
+        
+        # QAリストを辞書形式に変換
+        qa_dict_list = [{"question": qa.question, "answer": qa.answer} for qa in request.qa_list]
+        
+        # OpenAI APIを使用して詳細フィードバックを生成
+        feedbacks = await openai_service.generate_detailed_feedback(
+            qa_dict_list,
+            max_feedback_count=request.max_feedback_count,
+            language=request.language
+        )
+        
+        logger.info(f"生成された詳細フィードバック数: {sum(1 for f in feedbacks if f is not None)}/{len(feedbacks)}")
+        
+        return DetailedFeedbackResponse(feedbacks=feedbacks)
+    except Exception as e:
+        logger.error(f"詳細フィードバック生成エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

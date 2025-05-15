@@ -49,6 +49,7 @@ export interface FeedbackData {
     };
   };
   isEvaluating?: boolean;
+  isLoadingDetailedFeedback?: boolean;  // 詳細フィードバック取得中フラグ
 }
 
 interface InterviewContextType {

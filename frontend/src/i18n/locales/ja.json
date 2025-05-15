@@ -47,6 +47,8 @@
     "pricingNotice": "以下は現状想定しているプランと機能一覧です。プラン毎の価格や追加機能は今後決定予定になります。",
     "evaluating": "評価中...",
     "evaluatingDescription": "AIがあなたの面接内容を分析しています。しばらくお待ちください。",
+    "evaluatingDetailed": "詳細フィードバック生成中...",
+    "evaluatingDetailedDescription": "AIがあなたの回答を分析し、パーソナライズされたフィードバックを生成しています。",
     "performance": {
       "english": "英語力",
       "interview": "面接対応力",

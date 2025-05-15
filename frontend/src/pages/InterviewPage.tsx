@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { logToFile } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { Mic, X, Square, Send, Keyboard, Play, Pause, Eye, EyeOff } from 'lucide-react';
-import { useInterview } from '../context/InterviewContext';
+import { useInterview, FeedbackData } from '../context/InterviewContext';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CompletionDialog from '../components/CompletionDialog';
@@ -274,12 +274,7 @@ const InterviewPage: React.FC = () => {
     }
   }, [messages, audioElements]);
 
-  // 不要になったメソッドは修正
-  const playAIMessage = async (text: string) => {
-    // このメソッドはdisplayNextQuestionで統合済みのため、必要なくなりました
-    logToFile('playAIMessage is deprecated, use stored audio elements instead');
-  };
-
+  // 面接の初期化処理
   useEffect(() => {
     let isComponentMounted = true; // コンポーネントのマウント状態を追跡
     
@@ -348,6 +343,7 @@ const InterviewPage: React.FC = () => {
     };
   }, []);
 
+  // 面接時間のカウントダウン
   useEffect(() => {
     if (timeRemaining > 0) {
       const timer = setInterval(() => {
@@ -368,8 +364,47 @@ const InterviewPage: React.FC = () => {
   }, [messages, isLoading, transcription, isRecording, isPlaying, isAnyAudioPlaying, audioElements]);
 
   const handleEndInterview = () => {
-    const mockFeedback = getMockFeedback(messages);
-    setFeedback(mockFeedback);
+    // モックデータを使わず、実際のデータ構造でフィードバックを初期化
+    const initialFeedback: FeedbackData = {
+      overallScore: 0,
+      englishScore: {
+        pronunciation: 0,
+        vocabulary: 0,
+        grammar: 0
+      },
+      interviewScore: {
+        structure: 0,
+        logic: 0,
+        softSkills: 0
+      },
+      strengths: [],
+      improvements: [],
+      nextSteps: [],
+      // メッセージ履歴からQ&Aのペアを抽出（空のフィードバックで初期化）
+      detailedFeedback: messages.reduce((acc: any[], message, index) => {
+        if (message.role === 'assistant') {
+          const userResponse = messages[index + 1];
+          if (userResponse && userResponse.role === 'user') {
+            acc.push({
+              questionId: message.id,
+              question: message.content,
+              answer: userResponse.content,
+              englishFeedback: '',  // APIから取得するため空にしておく
+              interviewFeedback: '',  // APIから取得するため空にしておく
+              idealAnswer: ''  // APIから取得するため空にしておく
+            });
+          }
+        }
+        return acc;
+      }, []),
+      // 評価中フラグを明示的に設定
+      isEvaluating: false, // 評価取得処理が開始されていない状態
+      isLoadingDetailedFeedback: false, // 詳細フィードバック取得処理が開始されていない状態
+      evaluation: undefined // 明示的にundefinedを設定し、評価結果がないことを示す
+    };
+    
+    // 空のフィードバックを先にセットしてから画面遷移
+    setFeedback(initialFeedback);
     navigate('/feedback');
   };
 

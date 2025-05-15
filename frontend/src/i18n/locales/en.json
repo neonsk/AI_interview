@@ -47,6 +47,8 @@
     "pricingNotice": "The following are the current planned features by subscription tier. Pricing and additional features will be determined in the future.",
     "evaluating": "Evaluating...",
     "evaluatingDescription": "AI is analyzing your interview. This will only take a moment.",
+    "evaluatingDetailed": "Generating detailed feedback...",
+    "evaluatingDetailedDescription": "AI is analyzing your responses to provide personalized feedback.",
     "performance": {
       "english": "English Skills",
       "interview": "Interview Skills",

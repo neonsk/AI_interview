@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Lock, HelpCircle } from 'lucide-react';
@@ -6,26 +6,137 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { useInterview, FeedbackData } from '../context/InterviewContext';
 import Button from '../components/Button';
 import { interviewApi } from '../services/api';
+import { feedbackConfig } from '../config/interview';
 
 const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { feedback, messages, updateFeedback } = useInterview();
   const [activeTab, setActiveTab] = useState<'summary' | 'details'>('summary');
+  const [initialized, setInitialized] = useState(false);
+  const apiCallsInProgress = useRef({
+    evaluation: false,
+    detailedFeedback: false
+  });
 
+  // 評価APIを呼び出す条件を判定する関数
+  const shouldFetchEvaluation = () => {
+    if (!feedback || !messages.length) return false;
+    
+    return (
+      messages.length > 0 && 
+      !feedback.evaluation && 
+      !feedback.isEvaluating && 
+      !apiCallsInProgress.current.evaluation
+    );
+  };
+  
+  // 詳細フィードバックAPIを呼び出す条件を判定する関数
+  const shouldFetchDetailedFeedback = () => {
+    if (!feedback || !feedback.detailedFeedback?.length) return false;
+    
+    return (
+      feedback.detailedFeedback.length > 0 && 
+      !feedback.isLoadingDetailedFeedback && 
+      (!feedback.detailedFeedback[0].englishFeedback || 
+       !feedback.detailedFeedback[0].interviewFeedback || 
+       !feedback.detailedFeedback[0].idealAnswer) && 
+      !apiCallsInProgress.current.detailedFeedback
+    );
+  };
+  
+  // 評価APIを実行する関数
+  const executeEvaluationApi = async () => {
+    if (!shouldFetchEvaluation()) return;
+    
+    apiCallsInProgress.current.evaluation = true;
+    try {
+      await fetchEvaluation();
+    } finally {
+      apiCallsInProgress.current.evaluation = false;
+    }
+  };
+  
+  // 詳細フィードバックAPIを実行する関数
+  const executeDetailedFeedbackApi = async () => {
+    if (!shouldFetchDetailedFeedback()) return;
+    
+    apiCallsInProgress.current.detailedFeedback = true;
+    try {
+      await fetchDetailedFeedback();
+    } finally {
+      apiCallsInProgress.current.detailedFeedback = false;
+    }
+  };
+
+  // 初期化処理を行う関数
+  const initializeFeedbackData = async () => {
+    if (!feedback) return;
+    
+    // 初期化済みフラグを設定
+    setInitialized(true);
+    
+    // 両方のAPIを必要に応じて呼び出し
+    await Promise.all([
+      executeEvaluationApi(),
+      executeDetailedFeedbackApi()
+    ]);
+  };
+
+  // 結果画面遷移時に実行される初期化処理（コンポーネントマウント時に1回だけ実行）
   useEffect(() => {
     if (!feedback) {
       navigate('/');
-    } else if (activeTab === 'summary' && messages.length > 0 && !feedback.evaluation && !feedback.isEvaluating) {
-      // 評価データが未取得の場合は評価処理を開始
-      fetchEvaluation();
+      return;
     }
-  }, [feedback, navigate, activeTab, messages]);
+    
+    if (initialized) return;
+    
+    initializeFeedbackData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 依存配列を空にして初回マウント時のみ実行
+
+  // タブ切り替え時のAPIリクエスト処理
+  useEffect(() => {
+    if (!feedback || !initialized) return;
+    
+    const handleTabChange = async () => {
+      if (activeTab === 'summary') {
+        await executeEvaluationApi();
+      } else if (activeTab === 'details') {
+        await executeDetailedFeedbackApi();
+      }
+    };
+    
+    handleTabChange();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, initialized]);
+
+  // feedback または messages が変更された場合に、再初期化が必要かチェック
+  useEffect(() => {
+    if (!initialized || !feedback) return;
+    
+    // 状態が変わった場合に必要に応じてAPIを呼び出す
+    const checkAndFetchData = async () => {
+      await Promise.all([
+        executeEvaluationApi(),
+        executeDetailedFeedbackApi()
+      ]);
+    };
+    
+    checkAndFetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedback, messages, initialized]);
 
   const fetchEvaluation = async () => {
-    if (!messages.length) return;
+    if (!messages.length) {
+      console.error('メッセージが空のため評価できません');
+      return;
+    }
     
     try {
+      console.log('fetchEvaluation開始');
+      
       // 評価中フラグをセット
       updateFeedback({ isEvaluating: true });
       
@@ -38,16 +149,71 @@ const FeedbackPage: React.FC = () => {
         content: msg.content
       }));
       
+      // APIリクエスト送信
+      console.log('evaluateInterview APIリクエスト送信');
       const evaluation = await interviewApi.evaluateInterview(messageHistory, currentLanguage);
+      console.log('evaluateInterview APIレスポンス受信', evaluation);
       
       // 評価結果を保存
       updateFeedback({ 
         evaluation,
         isEvaluating: false 
       });
+      
+      console.log('評価結果保存完了');
     } catch (error) {
       console.error('評価取得エラー:', error);
       updateFeedback({ isEvaluating: false });
+    }
+  };
+
+  const fetchDetailedFeedback = async () => {
+    console.log('fetchDetailedFeedback start');
+    try {
+      // feedbackがnullの場合は処理をスキップ
+      if (!feedback) return;
+
+      // フィードバック取得中フラグをセット
+      updateFeedback({ isLoadingDetailedFeedback: true });
+      
+      // 現在の言語設定を取得
+      const currentLanguage = i18n.language;
+      
+      // QAリストの準備
+      const qaList = feedback.detailedFeedback.map(item => ({
+        question: item.question,
+        answer: item.answer
+      }));
+      
+      // フィードバック取得API呼び出し（設定ファイルの値を使用）
+      const detailedFeedbackResponse = await interviewApi.getDetailedFeedback(
+        qaList,
+        feedbackConfig.freeDetailedFeedbackCount,
+        currentLanguage
+      );
+
+      // 取得したフィードバックを既存のdetailedFeedbackにマージ
+      const updatedDetailedFeedback = feedback.detailedFeedback.map((item, index) => {
+        const newFeedback = detailedFeedbackResponse.feedbacks[index];
+        if (newFeedback) {
+          return {
+            ...item,
+            englishFeedback: newFeedback.englishFeedback,
+            interviewFeedback: newFeedback.interviewFeedback,
+            idealAnswer: newFeedback.idealAnswer
+          };
+        }
+        return item;
+      });
+      
+      // フィードバック更新
+      updateFeedback({ 
+        detailedFeedback: updatedDetailedFeedback,
+        isLoadingDetailedFeedback: false 
+      });
+    } catch (error) {
+      console.error('詳細フィードバック取得エラー:', error);
+      updateFeedback({ isLoadingDetailedFeedback: false });
     }
   };
 
@@ -432,8 +598,21 @@ const FeedbackSection: React.FC<{
 };
 
 const DetailsTab: React.FC<{ feedback: FeedbackData }> = ({ feedback }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { updateFeedback } = useInterview();
+  
+  // ローディング中または各QAの評価データが空の場合のローディング表示
+  if (feedback.isLoadingDetailedFeedback || (feedback.detailedFeedback?.length > 0 && 
+      !feedback.detailedFeedback[0].englishFeedback)) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-lg text-gray-700">{t('feedback.evaluatingDetailed')}</p>
+        <p className="text-sm text-gray-500 mt-2">{t('feedback.evaluatingDetailedDescription')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 divide-y divide-gray-200">
@@ -448,7 +627,7 @@ const DetailsTab: React.FC<{ feedback: FeedbackData }> = ({ feedback }) => {
               <h4 className="text-lg font-semibold text-gray-800 mb-2">{t('feedback.yourAnswer')}</h4>
               <p className="text-gray-700 p-4 bg-gray-50 rounded-lg">{item.answer}</p>
             </div>
-            {index === 0 ? (
+            {index < feedbackConfig.freeDetailedFeedbackCount && item.englishFeedback ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-blue-50 p-4 rounded-lg">
@@ -471,16 +650,16 @@ const DetailsTab: React.FC<{ feedback: FeedbackData }> = ({ feedback }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h4 className="text-lg font-semibold text-blue-800 mb-2">{t('feedback.englishFeedback')}</h4>
-                      <p className="text-gray-700">{item.englishFeedback}</p>
+                      <p className="text-gray-700">{item.englishFeedback || t('feedback.evaluatingDetailed')}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg">
                       <h4 className="text-lg font-semibold text-green-800 mb-2">{t('feedback.interviewFeedback')}</h4>
-                      <p className="text-gray-700">{item.interviewFeedback}</p>
+                      <p className="text-gray-700">{item.interviewFeedback || t('feedback.evaluatingDetailed')}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="text-lg font-semibold text-gray-800 mb-2">{t('feedback.idealAnswer')}</h4>
-                    <p className="text-gray-700 italic">{item.idealAnswer}</p>
+                    <p className="text-gray-700 italic">{item.idealAnswer || t('feedback.evaluatingDetailed')}</p>
                   </div>
                 </div>
                 <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">

@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from app.core.config import InterviewMode
+from app.core.config import InterviewMode, settings
 
 
 class MessageHistory(BaseModel):
@@ -67,3 +67,32 @@ class InterviewEvaluationResponse(BaseModel):
             "actions": "業界固有の専門用語をより正確に使えるように学習しましょう。"
         }
     ) 
+
+
+# 詳細フィードバックのQA項目
+class FeedbackQA(BaseModel):
+    """QAセット"""
+    question: str = Field(..., description="面接質問")
+    answer: str = Field(..., description="ユーザーの回答")
+
+
+# 詳細フィードバックリクエスト
+class DetailedFeedbackRequest(BaseModel):
+    """詳細フィードバックリクエスト"""
+    qa_list: List[FeedbackQA] = Field(..., description="質問と回答のリスト")
+    max_feedback_count: int = Field(default=settings.FREE_DETAILED_FEEDBACK_COUNT, description="フィードバックを生成する最大QA数")
+    language: str = Field(default="en", description="言語設定（en/ja）")
+
+
+# 詳細フィードバックの評価結果
+class FeedbackEvaluation(BaseModel):
+    """各QAの評価結果"""
+    englishFeedback: str = Field(..., description="英語力の評価フィードバック")
+    interviewFeedback: str = Field(..., description="面接対応力の評価フィードバック")
+    idealAnswer: str = Field(..., description="理想的な回答例")
+
+
+# 詳細フィードバックレスポンス
+class DetailedFeedbackResponse(BaseModel):
+    """詳細フィードバックレスポンス"""
+    feedbacks: List[Optional[FeedbackEvaluation]] = Field(..., description="各QAの評価結果、未評価の場合はNull") 

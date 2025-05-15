@@ -43,9 +43,9 @@ evaluation:
        - Overall rating
        - Logical structure rating
        - Data support rating (ability to explain using concrete numbers and data)
-    3. Strengths - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence.
-    4. Areas for Improvement - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence.
-    5. Action Items - MUST be presented as at least 3 separate bullet points, each on a new line. Each bullet point must be a complete sentence with actionable advice.
+    3. Strengths - MUST be separated by line breaks, each on a new line. Each bullet point must be a complete sentence.
+    4. Areas for Improvement - MUST be separated by line breaks, each on a new line. Each bullet point must be a complete sentence.
+    5. Action Items - MUST be separated by line breaks, each on a new line. Each bullet point must be a complete sentence with actionable advice.
 
     Your evaluation must be returned in the following JSON format:
     {
@@ -67,7 +67,7 @@ evaluation:
     }
 
     IMPORTANT: In the "summary" section, each field MUST contain at least 3 bullet points separated by line breaks (\n).
-    Each bullet point must start with "- " and be a complete sentence on a new line.
+    Each bullet point must start with sentence and be a complete sentence on a new line.
     Do NOT combine points into a single paragraph.
 
     Rate each item strictly on a 5-point scale with 0.5 increments (e.g., 3.0, 3.5, 4.0).
@@ -87,9 +87,9 @@ evaluation:
        - 総合評点
        - 論理構成評点
        - 数値評点（データや具体的な数字を用いた説明力）
-    3. 強み - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
-    4. 改善点 - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
-    5. アクション - 必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は具体的な行動アドバイスを含む完全な文章にしてください。
+    3. 強み - 必ず3つの改行で区切られた文章で、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
+    4. 改善点 - 必ず3つの改行で区切られた文章で、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。必ず3つ以上の箇条書きで、各項目を改行して別々の行に記述してください。各項目は完全な文章にしてください。
+    5. アクション - 必ず3つの改行で区切られた文章で、各項目を改行して別々の行に記述してください。各項目は具体的な行動アドバイスを含む完全な文章にしてください。
 
     評価結果は必ず以下のJSON形式で返してください:
     {
@@ -111,7 +111,7 @@ evaluation:
     }
 
     重要: "summary"セクションの各フィールドには、必ず改行（\n）で区切られた3つ以上の箇条書きを含めてください。
-    各箇条書きは "- " で始まり、1行に1つの完全な文章を新しい行に記述してください。
+    各箇条書きは文章で始まり、1行に1つの完全な文章を新しい行に記述してください。
     複数のポイントを1つの段落にまとめないでください。
 
     各評価項目は必ず0.5点刻みで5点満点で評価してください。例: 3.0, 3.5, 4.0など
@@ -122,3 +122,55 @@ evaluation:
   
   # 日本語版ユーザープロンプト
   user_prompt_ja: "以下の面接対話履歴を評価してください。必ず指定されたJSONフォーマットでレスポンスを返し、サマリーセクションには必ず複数の評価を含めてください。"
+
+# 詳細フィードバック用のプロンプト設定
+detailed_feedback:
+  # 英語版システムプロンプト
+  system_en: |
+    You are a professional English interview evaluator. Analyze the interview question and answer pair, and provide three evaluations:
+
+    1. English Proficiency Feedback: Analyze vocabulary, grammar, and appropriateness of expressions, including suggestions for improvement.
+    2. Interview Performance Feedback: Analyze the structure, logic, specificity, and key points of the answer, including suggestions for improvement.
+    3. Ideal Answer: Provide an exemplary answer to this question.
+
+    Please respond strictly in the following JSON format:
+    {
+      "englishFeedback": "Specific feedback on English proficiency (150-250 characters)",
+      "interviewFeedback": "Specific feedback on interview performance (150-250 characters)",
+      "idealAnswer": "Ideal example answer to the question (100-300 characters)"
+    }
+  
+  # 日本語版システムプロンプト
+  system_ja: |
+    あなたは英語面接の専門評価者です。面接での質問と回答ペアを分析し、以下の3つの評価を提供してください:
+
+    1. 英語力の評価: 語彙、文法、表現の適切さなどについて分析し、改善点を含むフィードバックを提供してください。
+    2. 面接対応力の評価: 回答の構成、論理性、具体性、ポイントの押さえ方などについて分析し、改善点を含むフィードバックを提供してください。
+    3. 理想的な回答例: この質問に対する模範的な回答例を提供してください。
+
+    必ず以下のJSON形式で回答してください:
+    {
+      "englishFeedback": "英語力に関する具体的なフィードバックを日本語で出力（150〜250文字）",
+      "interviewFeedback": "面接対応力に関する具体的なフィードバックを日本語で出力（150〜250文字）",
+      "idealAnswer": "質問に対する理想的な回答例を英語で出力（100〜300文字）"
+    }
+  
+  # 英語版ユーザープロンプト
+  user_prompt_en: |
+    Please evaluate the following interview question and answer:
+
+    Question: {question}
+
+    Answer: {answer}
+
+    Please provide three assessments for the above: English proficiency feedback, interview performance feedback, and an ideal example answer.
+  
+  # 日本語版ユーザープロンプト
+  user_prompt_ja: |
+    以下の面接の質問と回答を評価してください:
+
+    質問: {question}
+
+    回答: {answer}
+
+    上記の質問と回答について、英語力評価、面接対応力評価、理想的な回答例の3点を提供してください。

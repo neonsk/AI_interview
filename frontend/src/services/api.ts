@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logToFile } from '../utils/logger';
+import { feedbackConfig } from '../config/interview';
 
 // APIのベースURL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -51,6 +52,24 @@ interface EvaluationResponse {
     improvements: string;
     actions: string;
   };
+}
+
+// 詳細フィードバックのQA項目
+interface FeedbackQA {
+  question: string;
+  answer: string;
+}
+
+// 詳細フィードバックの評価結果
+interface FeedbackEvaluation {
+  englishFeedback: string;
+  interviewFeedback: string;
+  idealAnswer: string;
+}
+
+// 詳細フィードバックレスポンスの型定義
+interface DetailedFeedbackResponse {
+  feedbacks: (FeedbackEvaluation | null)[];
 }
 
 // インタビュー関連のAPI
@@ -131,6 +150,32 @@ export const interviewApi = {
       return response.data;
     } catch (error) {
       logToFile('Error evaluating interview', { error });
+      throw error;
+    }
+  },
+
+  // 詳細なQAフィードバックを取得
+  async getDetailedFeedback(qaList: FeedbackQA[], maxFeedbackCount: number = feedbackConfig.freeDetailedFeedbackCount, language: string = "en"): Promise<DetailedFeedbackResponse> {
+    try {
+      logToFile('Requesting detailed feedback', { 
+        qaCount: qaList.length, 
+        maxFeedbackCount,
+        language 
+      });
+      
+      const response = await axios.post<DetailedFeedbackResponse>(
+        `${API_BASE_URL}/api/interview/detailed-feedback`,
+        { 
+          qa_list: qaList,
+          max_feedback_count: maxFeedbackCount,
+          language
+        }
+      );
+      
+      logToFile('Detailed feedback received successfully');
+      return response.data;
+    } catch (error) {
+      logToFile('Error getting detailed feedback', { error });
       throw error;
     }
   },
