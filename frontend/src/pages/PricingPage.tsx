@@ -63,8 +63,14 @@ const PricingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900">Free</h2>
-              <p className="text-blue-600 font-medium mt-2 mb-8">{currentLang === 'ja' ? '現在の設定' : 'Current Setting'}</p>
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-gray-800">Free</span>
+              </div>
+              <div className="flex items-end mb-2">
+                <span className="text-5xl font-bold text-gray-900">$0</span>
+                <span className="text-lg text-gray-700 ml-2">{currentLang === 'ja' ? '/月' : '/mo'}</span>
+              </div>
+              <div className="h-4 mb-2" />
               <ul className="space-y-4">
                 <PricingItem 
                   text={currentLang === 'ja' ? '経歴・職種設定' : 'Background & position settings'}
@@ -98,8 +104,14 @@ const PricingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900">Lite</h2>
-              <div className="h-8 mb-8" />
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-gray-800">Lite</span>
+              </div>
+              <div className="flex items-end mb-2">
+                <span className="text-5xl font-bold text-gray-900">$9</span>
+                <span className="text-lg text-gray-700 ml-2">{currentLang === 'ja' ? '/月' : '/mo'}</span>
+              </div>
+              <div className="h-4 mb-2" />
               <ul className="space-y-4">
                 <PricingItem 
                   text={currentLang === 'ja' ? '経歴・職種設定' : 'Background & position settings'}
@@ -146,8 +158,14 @@ const PricingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900">Pro</h2>
-              <div className="h-8 mb-8" />
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-gray-800">Pro</span>
+              </div>
+              <div className="flex items-end mb-2">
+                <span className="text-5xl font-bold text-gray-900">$19</span>
+                <span className="text-lg text-gray-700 ml-2">{currentLang === 'ja' ? '/月' : '/mo'}</span>
+              </div>
+              <div className="h-4 mb-2" />
               <ul className="space-y-4">
                 <PricingItem 
                   text={currentLang === 'ja' ? '経歴・職種設定' : 'Background & position settings'}
