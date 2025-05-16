@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { logToFile } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,6 @@ import CompletionDialog from '../components/CompletionDialog';
 import InterviewTimer from '../components/InterviewTimer';
 import AudioRecorder from '../components/AudioRecorder';
 import { interviewConfig } from '../config/interview';
-import { getMockFeedback } from '../utils/mockData';
 import { interviewApi } from '../services/api';
 
 const InterviewPage: React.FC = () => {

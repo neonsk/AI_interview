@@ -1,19 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, X, ArrowLeft } from 'lucide-react';
 import Button from '../components/Button';
+import PreorderForm from '../components/PreorderForm';
 
 const PricingPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const currentLang = i18n.language;
-  const formUrl = 'https://forms.gle/your-form-url';
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'Plus' | 'Pro'>('Plus');
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  const handleOpenForm = (plan: 'Plus' | 'Pro') => {
+    setSelectedPlan(plan);
+    setIsFormOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-16">
@@ -114,8 +121,8 @@ const PricingPage: React.FC = () => {
                   text={currentLang === 'ja' ? 'AIアバター面接' : 'AI avatar interview'}
                   included={false}
                 />
-                <p class="text-gray-500">
-                  <span class="w-2 inline-block"></span>
+                <p className="text-gray-500">
+                  <span className="w-2 inline-block"></span>
                    {currentLang === 'ja' ? '(今後機能拡充予定)' : '(Feature Expansion Planned)'}
                 </p>
               </ul>
@@ -124,7 +131,7 @@ const PricingPage: React.FC = () => {
               <Button
                 variant="primary"
                 className="w-full bg-blue-500 hover:bg-blue-600"
-                onClick={() => window.open(formUrl, '_blank')}
+                onClick={() => handleOpenForm('Plus')}
               >
                 {currentLang === 'ja' ? '先行予約' : 'Pre-order'}
               </Button>
@@ -162,8 +169,8 @@ const PricingPage: React.FC = () => {
                   text={currentLang === 'ja' ? 'AIアバター面接' : 'AI avatar interview'}
                   included={true}
                 />
-                <p class="text-gray-500">
-                  <span class="w-2 inline-block"></span>
+                <p className="text-gray-500">
+                  <span className="w-2 inline-block"></span>
                    {currentLang === 'ja' ? '(今後機能拡充予定)' : '(Feature Expansion Planned)'}
                 </p>
               </ul>
@@ -172,7 +179,7 @@ const PricingPage: React.FC = () => {
               <Button
                 variant="primary"
                 className="w-full bg-blue-500 hover:bg-blue-600"
-                onClick={() => window.open(formUrl, '_blank')}
+                onClick={() => handleOpenForm('Pro')}
               >
                 {currentLang === 'ja' ? '先行予約' : 'Pre-order'}
               </Button>
@@ -180,6 +187,12 @@ const PricingPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      <PreorderForm 
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        selectedPlan={selectedPlan}
+      />
     </div>
   );
 };
