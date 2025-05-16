@@ -9,7 +9,7 @@ import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CompletionDialog from '../components/CompletionDialog';
 import InterviewTimer from '../components/InterviewTimer';
-import AudioRecorder from '../components/AudioRecorder';
+import AudioRecorder, { AudioRecorderHandle } from '../components/AudioRecorder';
 import { interviewConfig } from '../config/interview';
 import { interviewApi } from '../services/api';
 
@@ -38,7 +38,7 @@ const InterviewPage: React.FC = () => {
   const [audioElements, setAudioElements] = useState<{[key: string]: HTMLAudioElement}>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRecorderRef = useRef<HTMLDivElement>(null);
+  const audioRecorderRef = useRef<AudioRecorderHandle>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -419,7 +419,7 @@ const InterviewPage: React.FC = () => {
     setIsRecording(true);
     setTranscription('');
     setShouldAutoScroll(true);
-    audioRecorderRef.current?.querySelector('button')?.click();
+    audioRecorderRef.current?.startRecording();
   };
 
   const handleStopRecording = (audioBlob?: Blob, audioUrl?: string, transcript?: string) => {
@@ -487,19 +487,7 @@ const InterviewPage: React.FC = () => {
     setTranscription('');
     setShouldAutoScroll(true);
     setShowSpeakAgain(false);
-    
-    // キャンセルボタンをクリック
-    const cancelButton = audioRecorderRef.current?.querySelector('button:nth-child(2)') as HTMLButtonElement | null;
-    if (cancelButton) {
-      cancelButton.click(); // キャンセル用のボタンをクリック
-    } else {
-      // キャンセルボタンが見つからない場合は通常のストップボタンをクリック
-      const stopButton = audioRecorderRef.current?.querySelector('button') as HTMLButtonElement | null;
-      if (stopButton) {
-        stopButton.click();
-      }
-      logToFile('Cancel button not found, using normal stop button');
-    }
+    audioRecorderRef.current?.cancelRecording();
   };
 
   const toggleKeyboardMode = () => {
@@ -870,8 +858,9 @@ const InterviewPage: React.FC = () => {
         </div>
       </div>
 
-      <div ref={audioRecorderRef} className="hidden">
+      <div className="hidden">
         <AudioRecorder
+          ref={audioRecorderRef}
           onTranscriptionUpdate={handleTranscriptionUpdate}
           onRecordingStop={handleStopRecording}
         />
@@ -928,7 +917,7 @@ const InterviewPage: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => audioRecorderRef.current?.querySelector('button')?.click()}
+                    onClick={() => audioRecorderRef.current?.stopRecording()}
                     className={`w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-100 text-blue-600 ${isAnyAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-200'} flex items-center justify-center transition-all transform ${isAnyAudioPlaying ? '' : 'hover:scale-105'}`}
                     aria-label="Stop recording"
                     disabled={isAnyAudioPlaying}
