@@ -11,6 +11,8 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { InterviewProvider } from './context/InterviewContext';
 import PageTransition from './components/PageTransition';
+import { AudioStopperProvider } from './context/AudioStopperContext';
+import AudioStopper from './components/AudioStopper';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -55,19 +57,22 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-    <InterviewProvider>
-      <Router>
-        <div className="min-h-screen flex flex-col pt-16">
-          <Navbar />
-          <main className="flex-1 flex flex-col">
-            <AnimatedRoutes />
-          </main>
-          {location.pathname !== '/interview' && location.pathname !== '/settings' && (
-            <Footer />
-          )}
-        </div>
-      </Router>
-    </InterviewProvider>
+    <AudioStopperProvider>
+      <InterviewProvider>
+        <Router>
+          <AudioStopper />
+          <div className="min-h-screen flex flex-col pt-16">
+            <Navbar />
+            <main className="flex-1 flex flex-col">
+              <AnimatedRoutes />
+            </main>
+            {location.pathname !== '/interview' && location.pathname !== '/settings' && (
+              <Footer />
+            )}
+          </div>
+        </Router>
+      </InterviewProvider>
+    </AudioStopperProvider>
   );
 }
 

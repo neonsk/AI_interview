@@ -4,6 +4,7 @@ import { logToFile } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { Mic, X, Square, Send, Keyboard, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import { useInterview, FeedbackData } from '../context/InterviewContext';
+import { useAudioStopper } from '../context/AudioStopperContext';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CompletionDialog from '../components/CompletionDialog';
@@ -17,6 +18,7 @@ const InterviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { messages, addMessage, startInterview, endInterview, setFeedback, toggleMessageVisibility } = useInterview();
+  const { registerAudio, unregisterAudio } = useAudioStopper();
   const [isAIQuestionReady, setIsAIQuestionReady] = useState(false);
   
   const [isRecording, setIsRecording] = useState(false);
@@ -218,11 +220,16 @@ const InterviewPage: React.FC = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      // AudioStopperContextに登録
+      const audioId = registerAudio(audio);
+      
       // 音声を再生
       audio.onended = () => {
         setIsAudioLoading(false);
         setIsAnyAudioPlaying(false);
         setIsPlaying(null);
+        // 音声終了時に登録解除
+        unregisterAudio(audioId);
         // 音声再生終了時にスクロールを最下部に移動
         scrollToBottom();
       };
@@ -232,6 +239,7 @@ const InterviewPage: React.FC = () => {
         setIsAudioLoading(false);
         setIsAnyAudioPlaying(false);
         setIsPlaying(null);
+        unregisterAudio(audioId);
       };
       
       // 音声を保存
@@ -580,20 +588,26 @@ const InterviewPage: React.FC = () => {
         // 再生前に既存のイベントリスナーをクリア
         const newAudio = new Audio(audio.src);
         
+        // AudioStopperContextに登録
+        const audioId = registerAudio(newAudio);
+        
         // 再生完了時のイベントリスナーを設定
         newAudio.onended = () => {
           updatePlayingState(false, null);
+          unregisterAudio(audioId);
         };
         
         newAudio.onerror = (error) => {
           logToFile('Error playing cached audio', { error, messageId });
           updatePlayingState(false, null);
+          unregisterAudio(audioId);
         };
         
         // 再生
         newAudio.play().catch(error => {
           logToFile('Error playing audio', { error, messageId });
           updatePlayingState(false, null);
+          unregisterAudio(audioId);
         });
         
         // 新しい音声要素で置き換え
@@ -613,14 +627,19 @@ const InterviewPage: React.FC = () => {
       // 音声エレメントを作成
       const audio = new Audio(audioUrl);
       
+      // AudioStopperContextに登録
+      const audioId = registerAudio(audio);
+      
       // イベントハンドラーを設定
       audio.onended = () => {
         updatePlayingState(false, null);
+        unregisterAudio(audioId);
       };
       
       audio.onerror = (error) => {
         logToFile('Error playing generated audio', { error, messageId });
         updatePlayingState(false, null);
+        unregisterAudio(audioId);
       };
       
       // 状態を更新
@@ -678,10 +697,14 @@ const InterviewPage: React.FC = () => {
       // 新しい音声を再生
       const audio = new Audio(audioUrl);
       
+      // AudioStopperContextに登録
+      const audioId = registerAudio(audio);
+      
       // 再生完了時のイベントリスナーを設定
       audio.onended = () => {
         setPlayingUserAudio(null);
         setIsAnyAudioPlaying(false);
+        unregisterAudio(audioId);
         // 音声再生完了時にスクロールを最下部に移動
         scrollToBottom();
       };
@@ -691,6 +714,7 @@ const InterviewPage: React.FC = () => {
         logToFile('Error playing user audio', { error, messageId });
         setPlayingUserAudio(null);
         setIsAnyAudioPlaying(false);
+        unregisterAudio(audioId);
       };
       
       // 再生
@@ -698,6 +722,7 @@ const InterviewPage: React.FC = () => {
         logToFile('Error playing user audio', { error, messageId });
         setPlayingUserAudio(null);
         setIsAnyAudioPlaying(false);
+        unregisterAudio(audioId);
       });
       
       setPlayingUserAudio(messageId);

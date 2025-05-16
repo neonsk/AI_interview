@@ -107,7 +107,7 @@ class OpenAIService:
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
-                max_tokens=300,
+                max_tokens=50,
                 response_format={"type": "json_object"}
             )
             
@@ -236,7 +236,7 @@ class OpenAIService:
                 model=self.model,
                 messages=messages,
                 temperature=0.3,  # 評価なので低めの温度設定
-                max_tokens=1000,
+                max_tokens=300,
                 response_format={"type": "json_object"}
             )
             
@@ -363,7 +363,7 @@ class OpenAIService:
                     model=self.model,
                     messages=messages,
                     temperature=0.3,
-                    max_tokens=1000,
+                    max_tokens=300,
                     response_format={"type": "json_object"}
                 )
                 

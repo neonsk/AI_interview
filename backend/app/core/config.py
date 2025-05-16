@@ -28,22 +28,20 @@ OPENAI_TEMPERATURE = 0.7
 # OpenAI Text to Speech パラメータ
 OPENAI_TTS_MODEL = os.getenv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
 OPENAI_TTS_VOICE = os.getenv("OPENAI_TTS_VOICE", "alloy")
-OPENAI_TTS_RESPONSE_FORMAT = "mp3"
-
-# 利用可能な音声タイプ
 OPENAI_TTS_AVAILABLE_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+OPENAI_TTS_RESPONSE_FORMAT = "mp3"
 
 # フィードバック表示設定
 FREE_DETAILED_FEEDBACK_COUNT = int(os.getenv("FREE_DETAILED_FEEDBACK_COUNT", "1"))
 
 # デフォルトの質問生成パラメータ
-DEFAULT_INTERVIEW_PARAMS = {
-    "max_tokens": 300,
-    "temperature": OPENAI_TEMPERATURE,
-    "top_p": 1,
-    "frequency_penalty": 0.5,
-    "presence_penalty": 0.5
-}
+# DEFAULT_INTERVIEW_PARAMS = {
+#     "max_tokens": 300,
+#     "temperature": OPENAI_TEMPERATURE,
+#     "top_p": 1,
+#     "frequency_penalty": 0.5,
+#     "presence_penalty": 0.5
+# }
 
 class Settings(BaseSettings):
     """アプリケーション設定"""
