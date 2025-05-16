@@ -51,7 +51,7 @@
     "evaluatingDetailedDescription": "AIがあなたの回答を分析し、パーソナライズされたフィードバックを生成しています。",
     "performance": {
       "english": "英語力",
-      "interview": "面接対応力",
+      "interview": "面接力",
       "vocabulary": {
         "title": "語彙力",
         "description": "業界用語や文脈に適した単語の選択・使用の正確性"
@@ -80,7 +80,7 @@
     "question": "質問 {{number}}",
     "yourAnswer": "あなたの回答",
     "englishFeedback": "英語力の評価",
-    "interviewFeedback": "面接対応の評価",
+    "interviewFeedback": "面接力の評価",
     "idealAnswer": "模範回答",
     "noData": "フィードバックデータがありません",
     "viewPricingPlans": "料金プランを見る",
@@ -117,7 +117,7 @@
       },
       "step2": {
         "title": "詳細なフィードバック",
-        "description": "英語力と面接対応力の両面から総合評価。具体的な改善点と模範回答を提示"
+        "description": "英語力と面接力の両面から総合評価。具体的な改善点と模範回答を提示"
       },
       "step3": {
         "title": "継続的な改善",

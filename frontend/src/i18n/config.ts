@@ -14,7 +14,10 @@ i18n
       en: { translation: en }
     },
     fallbackLng: 'en',
-    lng: 'en',
+    detection: {
+      order: ['navigator', 'htmlTag', 'path', 'subdomain'],
+      caches: ['localStorage', 'cookie'],
+    },
     interpolation: {
       escapeValue: false
     }
