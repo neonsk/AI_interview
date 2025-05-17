@@ -6,6 +6,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import io
+from jinja2 import Template
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
@@ -42,9 +43,9 @@ class OpenAIService:
         except Exception as e:
             raise ValueError(f"プロンプトファイルの読み込みに失敗しました: {str(e)}")
     
-    def _format_prompt_template(self, template: str, **kwargs) -> str:
-        """テンプレートを値で置換する"""
-        return template.format(**kwargs)
+    # def _format_prompt_template(self, template: str, **kwargs) -> str:
+    #     """テンプレートを値で置換する"""
+    #     return template.format(**kwargs)
     
     async def generate_interview_question(self, request: InterviewQuestionRequest) -> str:
         """面接質問を生成する"""
@@ -53,43 +54,30 @@ class OpenAIService:
             prompt_path = settings.INTERVIEW_QUESTIONS_PROMPT_PATH
             prompt_data = await self._load_prompt(prompt_path)
             
-            # モードに応じたプロンプト設定を取得
-            mode_key = request.mode.value
-            mode_config = prompt_data.get(mode_key, prompt_data.get("general"))
-            
-            system_prompt = mode_config["system"]
-            
-            # personalizedモードの場合、追加情報を設定
-            if request.mode == InterviewMode.PERSONALIZED:
-                if not request.resume or not request.job_description:
-                    raise ValueError("personalizedモードには履歴書と求人情報が必要です")
-                
-                # 経歴と求人情報をシステムプロンプトに追加
-                system_prompt += f"\n\n応募者の経歴:\n{request.resume}\n\n"
-                system_prompt += f"求人情報:\n{request.job_description}\n\n"
-            
-            # 対話履歴の有無に基づいて指示を追加
-            if request.message_history and len(request.message_history) > 0:
-                system_prompt += "これまでの質問と回答を考慮して、次の質問を考えてください。同じ質問を繰り返さないようにしてください。またJSON形式で回答してください。"
-            else:
-                system_prompt += "質問はJSON形式で返してください。"
-            
+            # 統合プロンプトを取得
+            prompt_config = prompt_data.get("interview_question")
+            if not prompt_config:
+                raise ValueError("interview_questionプロンプトが見つかりません")
+
+            # Jinja2テンプレートとして埋め込み
+            system_template = Template(prompt_config["system"])
+            system_prompt = system_template.render(
+                resume=request.resume or '',
+                job_description=request.job_description or ''
+            )
+
             # メッセージ履歴を構築
             messages = [{"role": "system", "content": system_prompt}]
             
             # 対話履歴がある場合は追加
             if request.message_history and len(request.message_history) > 0:
-                # 対話履歴を追加
                 for msg in request.message_history:
-                    # Dictの場合は直接roleとcontentを取得
                     if isinstance(msg, dict):
                         role = msg.get("role", "")
                         content = msg.get("content", "")
-                    # MessageHistoryオブジェクトの場合は属性からアクセス
                     else:
                         role = msg.role
                         content = msg.content
-                        
                     messages.append({
                         "role": role,
                         "content": content
@@ -113,6 +101,7 @@ class OpenAIService:
             
             # レスポンスの処理
             content = response.choices[0].message.content
+            logger.info(f"OpenAI API レスポンス: {content}")
             
             try:
                 response_data = json.loads(content)
@@ -125,9 +114,14 @@ class OpenAIService:
                 if 'question' not in response_data:
                     # questionフィールドがなければ追加（フォールバック）
                     response_data['question'] = response_data.get('raw_response', 
-                                              "あなたの経験やスキルについて教えてください。")
+                                              "Sorry, please try again.")
                     
-                return response_data['question']
+                if 'reaction' in response_data:
+                    return_data = response_data['reaction']+' '+response_data['question']
+                else:
+                    return_data = response_data['question']
+                return return_data
+            
             except json.JSONDecodeError:
                 # JSON形式でない場合はそのまま返す
                 return content
@@ -236,7 +230,7 @@ class OpenAIService:
                 model=self.model,
                 messages=messages,
                 temperature=0.3,  # 評価なので低めの温度設定
-                max_tokens=300,
+                max_tokens=1000,
                 response_format={"type": "json_object"}
             )
             
@@ -278,6 +272,7 @@ class OpenAIService:
                 
             except json.JSONDecodeError as e:
                 logger.error(f"評価結果のJSONパースに失敗しました: {str(e)}")
+                logger.error(f"OpenAIレスポンス全文: {content}")
                 raise ValueError(f"評価結果のJSONパースに失敗しました: {str(e)}")
                 
         except Exception as e:

@@ -22,7 +22,8 @@ INTERVIEW_QUESTIONS_PROMPT_PATH = Path(PROMPTS_DIR) / "interview_questions.yaml"
 
 # OpenAI APIパラメータ
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_INTERVIEW_QUESTIONS_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+# OPENAI_INTERVIEW_QUESTIONS_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_INTERVIEW_QUESTIONS_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-nano")
 OPENAI_TEMPERATURE = 0.7
 
 # OpenAI Text to Speech パラメータ
