@@ -352,7 +352,7 @@ class OpenAIService:
                 
                 # リクエスト前にログ出力
                 logger.info(f"詳細フィードバック生成リクエスト（言語: {language}, QA index: {i}）")
-                
+                logger.info(f"メッセージ内容: {json.dumps(messages, ensure_ascii=False, indent=2)}") 
                 # OpenAI APIを呼び出してフィードバックを生成
                 response = await self.client.chat.completions.create(
                     model=self.model,
@@ -364,6 +364,7 @@ class OpenAIService:
                 
                 # レスポンスの処理
                 content = response.choices[0].message.content
+                logger.info(f"OpenAIレスポンス全文: {content}")
                 
                 try:
                     # JSONパース
