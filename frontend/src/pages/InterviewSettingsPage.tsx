@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Users, UserCircle } from 'lucide-react';
 import Button from '../components/Button';
 import { useInterview } from '../context/InterviewContext';
+import { logToFile } from '../utils/logger';
 
 // 面接モードタイプの定義
 type InterviewMode = 'general' | 'personalized';
@@ -42,6 +43,10 @@ const InterviewSettingsPage: React.FC = () => {
     console.log('jobDescription:', jobDescription);
     navigate('/interview');
   };
+
+  useEffect(() => {
+    logToFile('page_view', { page: 'InterviewSettingsPage' });
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50 py-8">

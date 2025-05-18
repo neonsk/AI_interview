@@ -7,6 +7,7 @@ import { useInterview, FeedbackData } from '../context/InterviewContext';
 import Button from '../components/Button';
 import { interviewApi } from '../services/api';
 import { feedbackConfig } from '../config/interview';
+import { logToFile } from '../utils/logger';
 
 const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -127,6 +128,10 @@ const FeedbackPage: React.FC = () => {
     checkAndFetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedback, messages, initialized]);
+
+  useEffect(() => {
+    logToFile('page_view', { page: 'FeedbackPage' });
+  }, []);
 
   const fetchEvaluation = async () => {
     if (!messages.length) {
@@ -394,7 +399,10 @@ const SummaryTab: React.FC<{ feedback: FeedbackData; navigate: (path: string) =>
             <Button
               variant="primary"
               size="medium"
-              onClick={() => navigate('/pricing')}
+              onClick={() => {
+                logToFile('click_paid_plan_button', { page: 'FeedbackPage', tab: 'summary' });
+                navigate('/pricing');
+              }}
               className="w-full bg-blue-500 hover:bg-blue-600 transition-all duration-200"
             >
               <div className="flex flex-col items-center">
@@ -487,7 +495,10 @@ const SummaryTab: React.FC<{ feedback: FeedbackData; navigate: (path: string) =>
           <Button
             variant="primary"
             size="medium"
-            onClick={() => navigate('/pricing')}
+            onClick={() => {
+              logToFile('click_paid_plan_button', { page: 'FeedbackPage', tab: 'summary' });
+              navigate('/pricing');
+            }}
             className="w-full bg-blue-500 hover:bg-blue-600 transition-all duration-200"
           >
             <div className="flex flex-col items-center">
@@ -668,7 +679,10 @@ const DetailsTab: React.FC<{ feedback: FeedbackData }> = ({ feedback }) => {
                     <div className="flex justify-center px-4">
                       <Button
                         variant="primary"
-                        onClick={() => navigate('/pricing')}
+                        onClick={() => {
+                          logToFile('click_paid_plan_button', { page: 'FeedbackPage', tab: 'details' });
+                          navigate('/pricing');
+                        }}
                         className="w-full max-w-sm bg-blue-500 hover:bg-blue-600 transition-all duration-200"
                       >
                         {t('feedback.viewPricingPlans')}

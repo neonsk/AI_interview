@@ -718,6 +718,10 @@ const InterviewPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    logToFile('page_view', { page: 'InterviewPage' });
+  }, []);
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-gray-50 relative">
       <div className="flex justify-between items-center px-6 py-4 bg-white shadow-sm">

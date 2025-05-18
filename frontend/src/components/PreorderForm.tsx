@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from './Button';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { logToFile } from '../utils/logger';
 
 interface PreorderFormProps {
   isOpen: boolean;
@@ -45,6 +46,7 @@ const PreorderForm: React.FC<PreorderFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    logToFile('submit_preorder_form', { page: 'PricingPage', plan: selectedPlan });
     setSubmitting(true);
     setError(null);
 

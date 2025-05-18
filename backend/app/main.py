@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 try:
     from app.api.routes import interview
     from app.core.logger import setup_logger
+    from app.api.routes import logs
     
     # ロガーの初期化（try内で例外を捕捉できるようにする）
     logger = setup_logger()
@@ -33,6 +34,7 @@ app.add_middleware(
 try:
     # 直接ルーターを追加（interview.py内のprefixが既に/api/interviewなので、追加のprefixは不要）
     app.include_router(interview.router)
+    app.include_router(logs.router)
 except Exception as e:
     print(f"APIルーターの統合中にエラーが発生しました: {str(e)}")
 

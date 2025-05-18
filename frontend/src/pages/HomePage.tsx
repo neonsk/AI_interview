@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Headset, Clock, Target, Brain, ArrowRight, PlayCircle, BarChart as ChartBar, UserCircle } from 'lucide-react';
 import Button from '../components/Button';
+import { logToFile } from '../utils/logger';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -44,6 +45,10 @@ const HomePage: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    logToFile('page_view', { page: 'HomePage' });
   }, []);
 
   return (

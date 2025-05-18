@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Check, X, ArrowLeft } from 'lucide-react';
 import Button from '../components/Button';
 import PreorderForm from '../components/PreorderForm';
+import { logToFile } from '../utils/logger';
 
 const PricingPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -15,9 +16,11 @@ const PricingPage: React.FC = () => {
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
+    logToFile('page_view', { page: 'PricingPage' });
   }, []);
 
   const handleOpenForm = (plan: 'Plus' | 'Pro') => {
+    logToFile('click_preorder_button', { page: 'PricingPage', plan });
     setSelectedPlan(plan);
     setIsFormOpen(true);
   };
