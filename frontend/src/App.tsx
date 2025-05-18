@@ -55,24 +55,28 @@ const AnimatedRoutes = () => {
   );
 };
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 function App() {
   return (
-    <AudioStopperProvider>
-      <InterviewProvider>
-        <Router>
-          <AudioStopper />
-          <div className="min-h-screen flex flex-col pt-16">
-            <Navbar />
-            <main className="flex-1 flex flex-col">
-              <AnimatedRoutes />
-            </main>
-            {location.pathname !== '/interview' && location.pathname !== '/settings' && (
-              <Footer />
-            )}
-          </div>
-        </Router>
-      </InterviewProvider>
-    </AudioStopperProvider>
+    <ErrorBoundary>
+      <AudioStopperProvider>
+        <InterviewProvider>
+          <Router>
+            <AudioStopper />
+            <div className="min-h-screen flex flex-col pt-16">
+              <Navbar />
+              <main className="flex-1 flex flex-col">
+                <AnimatedRoutes />
+              </main>
+              {location.pathname !== '/interview' && location.pathname !== '/settings' && (
+                <Footer />
+              )}
+            </div>
+          </Router>
+        </InterviewProvider>
+      </AudioStopperProvider>
+    </ErrorBoundary>
   );
 }
 

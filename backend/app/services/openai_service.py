@@ -163,7 +163,7 @@ class OpenAIService:
             return audio_data.getvalue()
             
         except Exception as e:
-            logger.error(f"音声合成中にエラーが発生しました: {str(e)}")
+            logger.error(f"音声合成中にエラーが発生しました: {str(e)}", exc_info=True)
             raise Exception(f"音声合成エラー: {str(e)}")
     
     async def evaluate_interview(self, message_history: List[Dict[str, Any]], language: str = "en") -> Dict[str, Any]:
@@ -276,7 +276,7 @@ class OpenAIService:
                 raise ValueError(f"評価結果のJSONパースに失敗しました: {str(e)}")
                 
         except Exception as e:
-            logger.error(f"面接評価中にエラーが発生しました: {str(e)}")
+            logger.error(f"面接評価中にエラーが発生しました: {str(e)}", exc_info=True)
             raise Exception(f"面接評価エラー: {str(e)}")
 
     async def generate_detailed_feedback(
@@ -387,5 +387,5 @@ class OpenAIService:
             return results
                 
         except Exception as e:
-            logger.error(f"詳細フィードバック生成中にエラーが発生しました: {str(e)}")
+            logger.error(f"詳細フィードバック生成中にエラーが発生しました: {str(e)}", exc_info=True)
             raise Exception(f"詳細フィードバックエラー: {str(e)}") 

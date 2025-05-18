@@ -40,7 +40,7 @@ async def generate_general_question(request: GeneralQuestionRequest = Body(...))
         
         return {"question": question}
     except Exception as e:
-        logger.error(f"質問生成エラー: {str(e)}")
+        logger.error(f"質問生成エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/questions/personalized", response_model=InterviewQuestionResponse)
@@ -60,7 +60,7 @@ async def generate_personalized_question(
         
         return {"question": question}
     except Exception as e:
-        logger.error(f"質問生成エラー: {str(e)}")
+        logger.error(f"質問生成エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/text-to-speech")
@@ -83,7 +83,7 @@ async def text_to_speech(request: TextToSpeechRequest):
             headers={"Content-Disposition": "attachment; filename=speech.mp3"}
         )
     except Exception as e:
-        logger.error(f"音声合成エラー: {str(e)}")
+        logger.error(f"音声合成エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/speech-to-text", response_model=SpeechToTextResponse)
@@ -113,7 +113,7 @@ async def speech_to_text(request: Request, language: str = Query("en-US")):
         logger.info(f"音声認識完了: テキスト長={len(transcript)}文字")
         return SpeechToTextResponse(transcript=transcript)
     except Exception as e:
-        logger.error(f"音声認識エラー: {str(e)}")
+        logger.error(f"音声認識エラー: {str(e)}", exc_info=True)
         return SpeechToTextResponse(transcript="", error=str(e))
 
 @router.post("/evaluation", response_model=InterviewEvaluationResponse)
@@ -131,7 +131,7 @@ async def evaluate_interview(request: InterviewEvaluationRequest):
         
         return evaluation
     except Exception as e:
-        logger.error(f"面接評価エラー: {str(e)}")
+        logger.error(f"面接評価エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/detailed-feedback", response_model=DetailedFeedbackResponse)
@@ -154,5 +154,5 @@ async def get_detailed_feedback(request: DetailedFeedbackRequest):
         
         return DetailedFeedbackResponse(feedbacks=feedbacks)
     except Exception as e:
-        logger.error(f"詳細フィードバック生成エラー: {str(e)}")
+        logger.error(f"詳細フィードバック生成エラー: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

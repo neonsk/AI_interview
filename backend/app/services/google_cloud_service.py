@@ -57,10 +57,10 @@ class GoogleCloudService:
             
         except GoogleAPIError as e:
             error_msg = f"Google Speech-to-Text APIエラー: {str(e)}"
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             return "", error_msg
             
         except Exception as e:
             error_msg = f"音声認識中に予期せぬエラーが発生しました: {str(e)}"
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             return "", error_msg 
