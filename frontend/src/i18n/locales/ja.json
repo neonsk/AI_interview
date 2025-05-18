@@ -7,6 +7,7 @@
     "voice": "音声入力",
     "keyboard": "キーボード入力",
     "recording": "録音中...",
+    "waiting": "待機中...",
     "speakAgain": "もう一度話してください",
     "typeAnswer": "回答を入力してください...",
     "cancel": "キャンセル"

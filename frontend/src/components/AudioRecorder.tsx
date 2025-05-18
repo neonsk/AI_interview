@@ -1,49 +1,18 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { logToFile } from '../utils/logger';
 import { interviewConfig } from '../config/interview';
+import { interviewApi } from '../services/api';
 
-// Web Speech API用の型定義
-interface SpeechRecognitionEvent extends Event {
-  resultIndex: number;
-  results: {
-    [index: number]: {
-      [index: number]: {
-        transcript: string;
-      };
-      isFinal: boolean;
-      length: number;
-    };
-    length: number;
-  };
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: SpeechRecognitionErrorEvent) => void;
-  onend: () => void;
-  start: () => void;
-  stop: () => void;
-}
-
-interface Window {
-  SpeechRecognition?: {
-    new(): SpeechRecognition;
-  };
-  webkitSpeechRecognition?: {
-    new(): SpeechRecognition;
-  };
+// Google Cloud Speech-to-Text API レスポンスの型定義
+interface SpeechToTextResponse {
+  transcript: string;
+  error?: string;
 }
 
 interface AudioRecorderProps {
   onTranscriptionUpdate: (text: string) => void;
   onRecordingStop: (audioBlob?: Blob, audioUrl?: string, transcript?: string) => void;
+  onSpeakingStatusChange?: (isSpeaking: boolean) => void;
 }
 
 export interface AudioRecorderHandle {
@@ -53,23 +22,22 @@ export interface AudioRecorderHandle {
 }
 
 const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
-  ({ onTranscriptionUpdate, onRecordingStop }, ref) => {
+  ({ onTranscriptionUpdate, onRecordingStop, onSpeakingStatusChange }, ref) => {
     const [isRecording, setIsRecording] = useState<boolean>(false);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const chunksRef = useRef<BlobPart[]>([]);
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const finalTranscriptRef = useRef<string>('');
-    const interimTranscriptRef = useRef<string>('');
     const streamRef = useRef<MediaStream | null>(null);
     const isCanceledRef = useRef<boolean>(false);
+    // 音声監視用
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const speakingIntervalRef = useRef<number | null>(null);
+    const isSpeakingRef = useRef<boolean>(false);
 
     useEffect(() => {
-      // Set up initial media stream
       setupMediaStream();
-
-      // Clean up on component unmount
       return () => {
         stopRecording();
         if (audioUrl) {
@@ -78,6 +46,7 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
+        cleanupSpeakingMonitor();
       };
     }, []);
 
@@ -90,51 +59,66 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
       }
     };
 
-    const setupRecognition = () => {
-      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-        // @ts-ignore TypeScriptのエラーを無視する - 実行時にはAPI使用可能
-        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognitionAPI();
-        
-        recognition.continuous = interviewConfig.speech.continuous;
-        recognition.interimResults = interviewConfig.speech.interimResults;
-        recognition.lang = interviewConfig.speech.language;
-        
-        // @ts-ignore TypeScriptのエラーを無視する
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          let interimTranscript = '';
-          let finalTranscript = finalTranscriptRef.current;
-          
-          logToFile('Speech recognition result event', {
-            resultLength: event.results.length,
-            resultIndex: event.resultIndex
-          });
+    // 音声ボリューム監視のセットアップ
+    const setupSpeakingMonitor = () => {
+      if (!streamRef.current) return;
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(streamRef.current);
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      isSpeakingRef.current = false;
+      // 監視ループ
+      speakingIntervalRef.current = window.setInterval(() => {
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteTimeDomainData(dataArray);
+        // RMS計算
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const val = (dataArray[i] - 128) / 128;
+          sum += val * val;
+        }
+        const rms = Math.sqrt(sum / bufferLength);
+        const threshold = 0.02; // しきい値（調整可）
+        const speaking = rms > threshold;
+        if (speaking !== isSpeakingRef.current) {
+          isSpeakingRef.current = speaking;
+          if (onSpeakingStatusChange) onSpeakingStatusChange(speaking);
+        }
+      }, 100);
+    };
 
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += ' ' + transcript;
-              finalTranscriptRef.current = finalTranscript;
-              logToFile('Final transcript updated', { finalTranscript });
-            } else {
-              interimTranscript += transcript;
-              interimTranscriptRef.current = interimTranscript;
-              logToFile('Interim transcript updated', { interimTranscript });
-            }
-          }
-          const fullTranscript = (finalTranscript + ' ' + interimTranscript).trim();
-          logToFile('Full transcript', { fullTranscript });
-          onTranscriptionUpdate(fullTranscript);
-        };
-        
-        // @ts-ignore TypeScriptのエラーを無視する
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          logToFile('Speech recognition error', { error: event.error });
-        };
-        
-        recognitionRef.current = recognition;
-      } else {
-        logToFile('Speech recognition not supported');
+    // 音声監視のクリーンアップ
+    const cleanupSpeakingMonitor = () => {
+      if (speakingIntervalRef.current) {
+        clearInterval(speakingIntervalRef.current);
+        speakingIntervalRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      analyserRef.current = null;
+      isSpeakingRef.current = false;
+      if (onSpeakingStatusChange) onSpeakingStatusChange(false);
+    };
+
+    // Google Cloud Speech-to-Text APIにデータを送信し、テキストを取得する関数
+    const recognizeSpeech = async (audioBlob: Blob): Promise<string> => {
+      try {
+        logToFile('Sending audio data to Speech-to-Text API', { blobSize: audioBlob.size });
+        // APIサービスの音声認識メソッドを使用
+        const transcript = await interviewApi.recognizeSpeech(
+          audioBlob,
+          interviewConfig.speech.language
+        );
+        return transcript || '';
+      } catch (error) {
+        logToFile('Error recognizing speech', { error });
+        return '';
       }
     };
 
@@ -151,12 +135,8 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
           throw new Error('No media stream available');
         }
 
-        // リセット処理
-        finalTranscriptRef.current = '';
-        interimTranscriptRef.current = '';
-        
-        // 音声認識の初期化
-        setupRecognition();
+        // 音声監視開始
+        setupSpeakingMonitor();
 
         // Set up MediaRecorder
         const recorder = new MediaRecorder(streamRef.current);
@@ -170,16 +150,24 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
           });
         };
         
-        recorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        recorder.onstop = async () => {
+          cleanupSpeakingMonitor();
+          const blob = new Blob(chunksRef.current, { type: interviewConfig.recording.mimeType || 'audio/webm' });
           const url = URL.createObjectURL(blob);
-          const currentTranscript = finalTranscriptRef.current;
-
           setAudioBlob(blob);
           setAudioUrl(url);
           
           if (!isCanceledRef.current) {
-            onRecordingStop(blob, url, currentTranscript);
+            // 録音終了時のみ音声認識を実行
+            let finalTranscript = '';
+            if (chunksRef.current.length > 0) {
+              try {
+                finalTranscript = await recognizeSpeech(blob);
+              } catch (error) {
+                logToFile('Error in final recognition', { error });
+              }
+            }
+            onRecordingStop(blob, url, finalTranscript);
           } else {
             logToFile('Recording was canceled, not sending results');
           }
@@ -187,18 +175,7 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
         
         setIsRecording(true);
         setMediaRecorder(recorder);
-        
         recorder.start();
-        
-        // SpeechRecognitionの開始
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-            logToFile('Speech recognition started');
-          } catch (err) {
-            logToFile('Error starting speech recognition', { error: err });
-          }
-        }
       } catch (err) {
         console.error('Error starting recording:', err);
         alert('Unable to access your microphone. Please check permissions and try again.');
@@ -208,53 +185,17 @@ const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
     const stopRecording = (canceled: boolean = false) => {
       isCanceledRef.current = canceled;
       logToFile('Stopping recording', { 
-        isCanceled: canceled,
-        currentTranscript: finalTranscriptRef.current
+        isCanceled: canceled
       });
-      
       if (mediaRecorder && isRecording) {
-        // 現在のトランスクリプトを保存
-        const savedFinalTranscript = finalTranscriptRef.current;
-        
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.onend = function() {
-              logToFile('Speech recognition ended normally');
-              if (mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-              }
-              setIsRecording(false);
-            };
-            
-            recognitionRef.current.stop();
-          } catch (err) {
-            logToFile('Error stopping recognition', { error: err });
-            // 認識エラーの場合でもレコーダーを停止
-            if (mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-            }
-            setIsRecording(false);
-          }
-        } else {
-          // 音声認識がない場合は単純にレコーダーを停止
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-          setIsRecording(false);
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
         }
+        setIsRecording(false);
       } else {
         setIsRecording(false);
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch (err) {
-            logToFile('Error stopping recognition', { error: err });
-          }
-        }
       }
-      // 停止後にrecognitionRef, mediaRecorderをnullクリア
       setTimeout(() => {
-        recognitionRef.current = null;
         setMediaRecorder(null);
       }, 100);
     };

@@ -35,6 +35,12 @@ interface TextToSpeechRequest {
   voice?: string;
 }
 
+// 音声認識レスポンスの型定義
+interface SpeechToTextResponse {
+  transcript: string;
+  error?: string;
+}
+
 // 面接評価レスポンスの型定義
 interface EvaluationResponse {
   englishSkill: {
@@ -130,6 +136,46 @@ export const interviewApi = {
     } catch (error) {
       logToFile('Error generating speech', { error });
       throw error;
+    }
+  },
+
+  // 音声を認識しテキストに変換
+  async recognizeSpeech(audioBlob: Blob, language: string = 'en-US'): Promise<string> {
+    try {
+      logToFile('Recognizing speech from audio', { 
+        blobSize: audioBlob.size, 
+        blobType: audioBlob.type,
+        language
+      });
+      
+      // FormDataの作成
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      formData.append('language', language);
+      
+      const response = await axios.post<SpeechToTextResponse>(
+        `${API_BASE_URL}/api/interview/speech-to-text`,
+        audioBlob,
+        { 
+          headers: {
+            'Content-Type': audioBlob.type,
+            'Accept': 'application/json'
+          },
+          params: {
+            language // クエリパラメータで言語指定
+          }
+        }
+      );
+      
+      logToFile('Speech recognition successful', { 
+        transcriptLength: response.data.transcript?.length || 0 
+      });
+      
+      return response.data.transcript || '';
+    } catch (error) {
+      logToFile('Error recognizing speech', { error });
+      // エラー時は空文字列を返す（繰り返しリトライするため）
+      return '';
     }
   },
 

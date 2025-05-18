@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query, File, UploadFile, Request
 from fastapi.responses import Response
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 
-from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest, InterviewEvaluationRequest, InterviewEvaluationResponse, DetailedFeedbackRequest, DetailedFeedbackResponse, FeedbackQA, FeedbackEvaluation
+from app.schemas.interview import InterviewQuestionRequest, InterviewQuestionResponse, MessageHistory, TextToSpeechRequest, InterviewEvaluationRequest, InterviewEvaluationResponse, DetailedFeedbackRequest, DetailedFeedbackResponse, FeedbackQA, FeedbackEvaluation, SpeechToTextRequest, SpeechToTextResponse
 from app.services.openai_service import OpenAIService
+from app.services.google_cloud_service import GoogleCloudService
 from app.core.logger import setup_logger
 from app.core.config import InterviewMode
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
 openai_service = OpenAIService()
+google_cloud_service = GoogleCloudService()
 logger = setup_logger()
 
 # リクエストのためのスキーマ
@@ -43,21 +45,16 @@ async def generate_general_question(request: GeneralQuestionRequest = Body(...))
 
 @router.post("/questions/personalized", response_model=InterviewQuestionResponse)
 async def generate_personalized_question(
-    resume: str = Body(...), 
-    job_description: str = Body(...),
-    message_history: List[Dict[str, Any]] = Body(default=[])
+    request: InterviewQuestionRequest = Body(...)
 ):
-    """個人化された面接質問を生成する"""
+    """履歴書と求人情報に基づいてパーソナライズされた質問を生成する"""
     try:
-        logger.info(f"個人化質問生成リクエスト: message_history={len(message_history)}件")
+        logger.info(f"パーソナライズド質問生成リクエスト: resume={len(request.resume or '')}文字, job_description={len(request.job_description or '')}文字")
         
-        request = InterviewQuestionRequest(
-            mode=InterviewMode.PERSONALIZED,
-            resume=resume,
-            job_description=job_description,
-            message_history=message_history
-        )
+        # モードを強制的にPERSONALIZEDに設定
+        request.mode = InterviewMode.PERSONALIZED
         
+        # 質問生成
         question = await openai_service.generate_interview_question(request)
         logger.info(f"生成された質問: {question}")
         
@@ -88,6 +85,36 @@ async def text_to_speech(request: TextToSpeechRequest):
     except Exception as e:
         logger.error(f"音声合成エラー: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/speech-to-text", response_model=SpeechToTextResponse)
+async def speech_to_text(request: Request, language: str = Query("en-US")):
+    """音声データをテキストに変換する"""
+    try:
+        logger.info(f"音声認識リクエスト: language={language}")
+        
+        # リクエストボディから音声データを読み込む
+        audio_content = await request.body()
+        
+        if not audio_content:
+            logger.error("音声データが空です")
+            return SpeechToTextResponse(transcript="", error="音声データが見つかりません")
+        
+        # Google Cloud Speech-to-Text APIを使用して音声認識
+        transcript, error = await google_cloud_service.speech_to_text(
+            audio_content=audio_content,
+            language_code=language
+        )
+        
+        if error:
+            logger.error(f"音声認識エラー: {error}")
+            return SpeechToTextResponse(transcript="", error=error)
+        
+        # 認識テキストを返す
+        logger.info(f"音声認識完了: テキスト長={len(transcript)}文字")
+        return SpeechToTextResponse(transcript=transcript)
+    except Exception as e:
+        logger.error(f"音声認識エラー: {str(e)}")
+        return SpeechToTextResponse(transcript="", error=str(e))
 
 @router.post("/evaluation", response_model=InterviewEvaluationResponse)
 async def evaluate_interview(request: InterviewEvaluationRequest):

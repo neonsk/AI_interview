@@ -51,3 +51,6 @@ backend/app/api/routes/__pycache__/
 
 # SpecStory explanation file
 .specstory/.what-is-this.md
+
+# 音声認識
+gcp-credentials.json

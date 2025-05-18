@@ -30,6 +30,17 @@ class TextToSpeechRequest(BaseModel):
     voice: Optional[str] = Field(default="alloy", description="使用する音声タイプ") 
 
 
+# 音声認識リクエスト用のスキーマ
+class SpeechToTextRequest(BaseModel):
+    language: str = Field(default="en-US", description="音声の言語コード")
+    
+
+# 音声認識レスポンス用のスキーマ
+class SpeechToTextResponse(BaseModel):
+    transcript: str = Field("", description="認識されたテキスト")
+    error: Optional[str] = Field(None, description="エラーメッセージ（該当する場合）")
+
+
 # 面接評価リクエスト用のスキーマ
 class InterviewEvaluationRequest(BaseModel):
     """面接評価リクエスト"""

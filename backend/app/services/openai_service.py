@@ -368,6 +368,8 @@ class OpenAIService:
                 try:
                     # JSONパース
                     feedback = json.loads(content)
+                    logger.info(f"QA: {qa}")
+                    logger.info(f"フィードバック結果: {feedback}")
                     
                     # 必要なフィールドが存在するか確認
                     required_fields = ["englishFeedback", "interviewFeedback", "idealAnswer"]

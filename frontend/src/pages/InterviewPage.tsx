@@ -36,6 +36,7 @@ const InterviewPage: React.FC = () => {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [isAnyAudioPlaying, setIsAnyAudioPlaying] = useState(false);
   const [audioElements, setAudioElements] = useState<{[key: string]: HTMLAudioElement}>({});
+  const [isSpeaking, setIsSpeaking] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<AudioRecorderHandle>(null);
@@ -844,7 +845,7 @@ const InterviewPage: React.FC = () => {
                 <div className="mb-2 flex items-center">
                   <span className="text-sm text-blue-800 flex items-center">
                     <span className="mr-2 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-                    {t('common.recording')}
+                    {isSpeaking ? t('common.recording') : t('common.waiting')}
                   </span>
                 </div>
                 <p className="text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
@@ -863,6 +864,7 @@ const InterviewPage: React.FC = () => {
           ref={audioRecorderRef}
           onTranscriptionUpdate={handleTranscriptionUpdate}
           onRecordingStop={handleStopRecording}
+          onSpeakingStatusChange={setIsSpeaking}
         />
       </div>
 
