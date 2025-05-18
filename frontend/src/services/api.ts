@@ -3,7 +3,7 @@ import { logToFile } from '../utils/logger';
 import { feedbackConfig } from '../config/interview';
 
 // APIのベースURL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Axiosインスタンスの作成
 const api = axios.create({
