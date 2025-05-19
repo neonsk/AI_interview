@@ -59,3 +59,7 @@ gcp-credentials.json
 .env
 .env.production
 .env.development
+
+# 証明書
+nginx/certs/fullchain.pem
+nginx/certs/privkey.pem

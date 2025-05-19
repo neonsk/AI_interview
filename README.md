@@ -76,3 +76,42 @@ FREE_DETAILED_FEEDBACK_COUNT=3
 - 実行前に、使用する .env ファイルが存在していることを確認してください。
 
 - 環境を追加したい場合は、対応する .env.<環境名> ファイルを作成してください。
+
+
+## nginx + HTTPS（開発・GCP両対応）
+
+### GCP（Let’s Encrypt証明書）
+
+1. `docker-compose.yml` の certbot サービスのメール・ドメインを修正
+2. 初回証明書取得
+   ```
+   docker-compose run --rm certbot
+   ```
+3. nginx起動
+   ```
+   docker-compose up -d nginx
+   ```
+4. 証明書更新
+   ```
+   docker-compose run --rm certbot renew
+   ```
+
+### ローカル（自己署名証明書）
+
+1. 自己署名証明書生成
+   ```
+   chmod +x ./nginx/certs/generate-selfsigned.sh
+   docker run --rm -v $(pwd)/nginx/certs:/etc/nginx/certs alpine sh /etc/nginx/certs/generate-selfsigned.sh
+   ```
+2. nginx起動
+   ```
+   docker-compose up -d nginx
+   ```
+3. https://localhost でアクセス（証明書警告は無視）
+
+---
+
+## 注意
+- certbot用webrootは `./nginx/www`
+- 証明書パスは `/etc/nginx/certs/`
+- frontend/backendのAPIパスはnginx.confで調整

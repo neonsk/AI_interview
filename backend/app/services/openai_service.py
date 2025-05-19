@@ -261,12 +261,7 @@ class OpenAIService:
                 evaluation["language"] = language
                 
                 # サマリー部分のログ出力（改行の確認用）
-                logger.info(
-                    f"評価結果（サマリー）:\n" +
-                    f"strengths=\n{evaluation['summary']['strengths']}\n" +
-                    f"improvements=\n{evaluation['summary']['improvements']}\n" + 
-                    f"actions=\n{evaluation['summary']['actions']}"
-                )
+                logger.info(f"評価結果（サマリー）: {evaluation['summary']}")
                 
                 return evaluation
                 
