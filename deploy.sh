@@ -13,15 +13,15 @@ fi
 case "$ACTION" in
     up)
         echo "🚀 Starting containers with $ENV_FILE..."
-        docker-compose --env-file "$ENV_FILE" up -d
+        ENV=${2:-development} docker-compose --env-file "$ENV_FILE" up -d
         ;;
     down)
         echo "🛑 Stopping containers..."
-        docker-compose down
+        ENV=${2:-development} docker-compose down
         ;;
     logs)
         echo "📄 Showing logs..."
-        docker-compose logs -f
+        ENV=${2:-development} docker-compose logs -f
         ;;
     *)
         echo "Usage: $0 {up|down|logs} [environment]"

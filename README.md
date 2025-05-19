@@ -31,6 +31,10 @@
 
 ## 使い方
 
+0. ファイル準備
+- .env.sampleを参考に、.env.[環境名] でファイルを作成
+- その他必要ファイル（GCPの認証ファイルなど）を所定のディレクトリに配置
+
 1. コンテナを起動
 
 ./deploy.sh up [環境名]
@@ -82,16 +86,31 @@ FREE_DETAILED_FEEDBACK_COUNT=3
 
 ### GCP（Let’s Encrypt証明書）
 
-1. `docker-compose.yml` の certbot サービスのメール・ドメインを修正
+1. `.env` の certbot サービスのメール・ドメインを修正
+
 2. 初回証明書取得
+- nginxを80のみで起動
+./nginx/nginx.conf に記載"server 443"に関する記述をコメントアウトし、80のみでnginxを起動
+- 証明書取得
    ```
    docker-compose run --rm certbot
    ```
-3. nginx起動
+3. 証明書の確認と移動
+- 確認（証明書が発行された場所）
+ls /etc/letsencrypt/live/dev.re-interview.com/
+
+- Docker ボリュームで正しい位置にマウントされているか確認
+ls ./nginx/certs/
+
+- なければコピー（またはシンボリックリンク）
+cp /etc/letsencrypt/live/dev.re-interview.com/fullchain.pem ./nginx/certs/
+cp /etc/letsencrypt/live/dev.re-interview.com/privkey.pem ./nginx/certs/
+
+4. nginx起動
    ```
-   docker-compose up -d nginx
+   docker-compose restart -d nginx
    ```
-4. 証明書更新
+5. 証明書更新
    ```
    docker-compose run --rm certbot renew
    ```
