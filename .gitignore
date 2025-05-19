@@ -54,3 +54,8 @@ backend/app/api/routes/__pycache__/
 
 # 音声認識
 gcp-credentials.json
+
+# ローカル環境のファイル
+.env
+.env.production
+.env.development

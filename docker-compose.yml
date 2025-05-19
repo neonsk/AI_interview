@@ -10,9 +10,10 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    env_file:
+      - .env.${ENV:-development}  # 共通・デフォルトの値はここから読み込む
     environment:
-      VITE_API_URL: http://localhost:8000
-      # VITE_API_URL: https://dev.re-interview.com
+      VITE_API_BASE_URL : ${VITE_API_BASE_URL}
 
   backend:
     build:
@@ -23,3 +24,10 @@ services:
     volumes:
       - ./backend:/app
       - ./logs:/app/logs
+    env_file:
+      - .env.${ENV:-development}  # 共通・デフォルトの値はここから読み込む  # rootの.envを参照
+    environment:
+      OPENAI_API_KEY : ${OPENAI_API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS : ${GOOGLE_APPLICATION_CREDENTIALS}
+      GOOGLE_CLOUD_PROJECT : ${GOOGLE_CLOUD_PROJECT}
+      GOOGLE_CLOUD_SPEECH_REGION : ${GOOGLE_CLOUD_SPEECH_REGION}
