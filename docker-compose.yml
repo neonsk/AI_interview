@@ -19,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile/frontend.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     ports:
       - "5173:5173"
     volumes:
@@ -29,7 +31,7 @@ services:
     env_file:
       - .env.${ENV:-development}  # 共通・デフォルトの値はここから読み込む
     environment:
-      VITE_API_BASE_URL : ${VITE_API_BASE_URL}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
 
   backend:
     build:
@@ -43,10 +45,10 @@ services:
     env_file:
       - .env.${ENV:-development}  # 共通・デフォルトの値はここから読み込む  # rootの.envを参照
     environment:
-      OPENAI_API_KEY : ${OPENAI_API_KEY}
-      GOOGLE_APPLICATION_CREDENTIALS : ${GOOGLE_APPLICATION_CREDENTIALS}
-      GOOGLE_CLOUD_PROJECT : ${GOOGLE_CLOUD_PROJECT}
-      GOOGLE_CLOUD_SPEECH_REGION : ${GOOGLE_CLOUD_SPEECH_REGION}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT}
+      GOOGLE_CLOUD_SPEECH_REGION: ${GOOGLE_CLOUD_SPEECH_REGION}
 
   certbot:
     image: certbot/certbot
