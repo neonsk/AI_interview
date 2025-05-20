@@ -37,6 +37,8 @@ const InterviewPage: React.FC = () => {
   const [isAnyAudioPlaying, setIsAnyAudioPlaying] = useState(false);
   const [audioElements, setAudioElements] = useState<{[key: string]: HTMLAudioElement}>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAudioAllowed, setIsAudioAllowed] = useState(false);
+  const [pendingAutoPlayMessage, setPendingAutoPlayMessage] = useState<{text: string, id: string} | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<AudioRecorderHandle>(null);
@@ -271,16 +273,32 @@ const InterviewPage: React.FC = () => {
 
   // メッセージが追加されたときに音声を生成
   useEffect(() => {
-    // メッセージが存在し、最後のメッセージがAIのものであれば
+    if (!isAudioAllowed) {
+      // 許可前は自動再生せず、AIメッセージが来たらpendingに保存
+      if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+        const lastMessage = messages[messages.length - 1];
+        if (!audioElements[lastMessage.id]) {
+          setPendingAutoPlayMessage({ text: lastMessage.content, id: lastMessage.id });
+        }
+      }
+      return;
+    }
+    // 許可後は従来通り自動再生
     if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
       const lastMessage = messages[messages.length - 1];
-      
-      // すでに音声が生成されていなければ
       if (!audioElements[lastMessage.id]) {
         generateAndPlayAudio(lastMessage.content, lastMessage.id);
       }
     }
-  }, [messages, audioElements]);
+  }, [messages, audioElements, isAudioAllowed]);
+
+  // 許可後にpendingのメッセージがあれば再生
+  useEffect(() => {
+    if (isAudioAllowed && pendingAutoPlayMessage) {
+      generateAndPlayAudio(pendingAutoPlayMessage.text, pendingAutoPlayMessage.id);
+      setPendingAutoPlayMessage(null);
+    }
+  }, [isAudioAllowed, pendingAutoPlayMessage]);
 
   // 面接の初期化処理
   useEffect(() => {
@@ -996,6 +1014,24 @@ const InterviewPage: React.FC = () => {
           isOpen={showEndDialog}
           onViewFeedback={handleEndInterview}
         />
+      )}
+
+      {/* 音声再生許可モーダル */}
+      {!isAudioAllowed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-lg flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">{t('audio.permissionTitle')}</h2>
+            <p className="text-gray-700 mb-6 text-center">{t('audio.permissionMessage')}</p>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => setIsAudioAllowed(true)}
+              className="w-full"
+            >
+              {t('audio.startWithAudio')}
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
