@@ -1,12 +1,12 @@
-FROM nginx:1.25-alpine
+FROM nginx:1.18-alpine
+RUN apk add --no-cache gettext
 
-# 設定ファイルをコピー（後でdocker-composeでマウントも可）
-COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
-
-# 証明書・秘密鍵を配置するディレクトリ
-RUN mkdir -p /etc/nginx/certs
+COPY nginx/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY nginx/docker-entrypoint.sh  /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # ポート開放
 EXPOSE 80 443
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
