@@ -1,6 +1,6 @@
 // 音声要素を生成し、指定した音量で返すユーティリティ
 // デフォルト音量は0.2（0.0〜1.0）
-export function createAudioWithVolume(src: string, volume: number = 0.2): HTMLAudioElement {
+export function createAudioWithVolume(src: string, volume: number = 0.4): HTMLAudioElement {
   const audio = new Audio(src);
   // iOS Safari判定
   const isIOSSafari =
@@ -20,14 +20,14 @@ export function createAudioWithVolume(src: string, volume: number = 0.2): HTMLAu
       const gainNode = context.createGain();
       gainNode.gain.value = volume;
       source.connect(gainNode).connect(context.destination);
+      audio.volume = 0; // Safariバグ対策: audioタグから直接出る音を消す
       console.log('[audio] iOS Safari: AudioContext+GainNodeで音量制御', { gain: gainNode.gain.value, contextState: context.state });
-      // SafariのAudioContextはユーザー操作後でないとresumeできない場合がある
-      // play()時にresumeを試みる
+      // play()時にresumeの完了をawaitしてから再生
       const origPlay = audio.play.bind(audio);
-      audio.play = function() {
+      audio.play = async function() {
         if (context.state === 'suspended') {
-          console.log('[audio] AudioContext state suspended, try resume');
-          try { context.resume(); } catch (e) { console.warn('[audio] context.resume() error', e); }
+          console.log('[audio] AudioContext state suspended, try resume (await)');
+          try { await context.resume(); } catch (e) { console.warn('[audio] context.resume() error', e); }
         }
         // @ts-ignore 型の不一致を無視
         return origPlay.apply(audio, arguments);
