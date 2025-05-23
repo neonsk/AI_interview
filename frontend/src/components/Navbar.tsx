@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Headset } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
+import serviceLogo from '../assets/service_logo.jpg';
 
 const Navbar: React.FC = () => {
   return (
@@ -9,8 +9,9 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center">
-            <Headset className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-semibold text-gray-900">AI Interview</span>
+            <div className="h-14 flex items-center bg-white rounded" style={{ boxShadow: '0 0 0 0', background: '#fff', paddingTop: '4px', paddingBottom: '4px' }}>
+              <img src={serviceLogo} alt="サービスロゴ" className="h-11 w-auto object-contain" style={{ background: '#fff' }} />
+            </div>
           </Link>
           <LanguageSwitcher />
         </div>

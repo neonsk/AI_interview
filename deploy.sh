@@ -19,6 +19,12 @@ case "$ACTION" in
         echo "🛑 Stopping containers..."
         ENV=${2:-development} docker-compose down
         ;;
+    restart)
+        echo "🔄 Restarting containers..."
+        ENV=${2:-development} docker-compose down
+        docker rmi -f $(docker images -q)
+        ENV=${2:-development} docker-compose --env-file "$ENV_FILE" up -d
+        ;;
     logs)
         echo "📄 Showing logs..."
         ENV=${2:-development} docker-compose logs -f
