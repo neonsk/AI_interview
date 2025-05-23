@@ -10,6 +10,8 @@ export function createAudioWithVolume(src: string, volume: number = 0.2): HTMLAu
     !/CriOS/.test(navigator.userAgent) &&
     !/FxiOS/.test(navigator.userAgent);
 
+  console.log('[audio] createAudioWithVolume', { src, volume, isIOSSafari, userAgent: navigator.userAgent });
+
   if (isIOSSafari && typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext)) {
     try {
       // AudioContext + GainNodeで音量制御
@@ -18,22 +20,26 @@ export function createAudioWithVolume(src: string, volume: number = 0.2): HTMLAu
       const gainNode = context.createGain();
       gainNode.gain.value = volume;
       source.connect(gainNode).connect(context.destination);
+      console.log('[audio] iOS Safari: AudioContext+GainNodeで音量制御', { gain: gainNode.gain.value, contextState: context.state });
       // SafariのAudioContextはユーザー操作後でないとresumeできない場合がある
       // play()時にresumeを試みる
       const origPlay = audio.play.bind(audio);
       audio.play = function() {
         if (context.state === 'suspended') {
-          try { context.resume(); } catch (e) {}
+          console.log('[audio] AudioContext state suspended, try resume');
+          try { context.resume(); } catch (e) { console.warn('[audio] context.resume() error', e); }
         }
         // @ts-ignore 型の不一致を無視
         return origPlay.apply(audio, arguments);
       };
     } catch (e) {
-      // 失敗した場合は従来通りvolumeで制御
+      console.warn('[audio] iOS Safari: AudioContext+GainNode失敗 fallback to audio.volume', e);
       audio.volume = volume;
+      console.log('[audio] fallback audio.volume set', { volume: audio.volume });
     }
   } else {
     audio.volume = volume;
+    console.log('[audio] 非iOSまたはAudioContext未対応: audio.volume set', { volume: audio.volume });
   }
   return audio;
 }
