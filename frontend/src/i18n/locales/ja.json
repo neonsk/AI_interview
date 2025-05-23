@@ -127,8 +127,8 @@
     }
   },
   "audio": {
-    "permissionTitle": "English audio will be played",
-    "permissionMessage": "AI-generated audio will be played during the interview. Please check your volume.",
-    "startWithAudio": "Start Interview"
+    "permissionTitle": "英語の音声が再生されます",
+    "permissionMessage": "面接ではAIの音声が再生されます。音量の確認をお願いします。",
+    "startWithAudio": "面接を始める"
   }
 }

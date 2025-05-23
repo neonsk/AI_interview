@@ -12,6 +12,7 @@ import InterviewTimer from '../components/InterviewTimer';
 import AudioRecorder, { AudioRecorderHandle } from '../components/AudioRecorder';
 import { interviewConfig } from '../config/interview';
 import { interviewApi } from '../services/api';
+import { createAudioWithVolume } from '../utils/audio';
 
 const InterviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const InterviewPage: React.FC = () => {
   const { messages, addMessage, startInterview, endInterview, setFeedback, toggleMessageVisibility } = useInterview();
   const { registerAudio, unregisterAudio } = useAudioStopper();
   const [isAIQuestionReady, setIsAIQuestionReady] = useState(false);
-  
+    
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
@@ -167,7 +168,7 @@ const InterviewPage: React.FC = () => {
   ) => {
     if (audioBlob) {
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+      const audio = createAudioWithVolume(audioUrl);
       const audioId = registerAudio(audio);
       audio.onended = () => {
         setIsAudioLoading(false);
@@ -522,7 +523,7 @@ const InterviewPage: React.FC = () => {
         const audio = audioElements[messageId];
         
         // 再生前に既存のイベントリスナーをクリア
-        const newAudio = new Audio(audio.src);
+        const newAudio = createAudioWithVolume(audio.src);
         
         // AudioStopperContextに登録
         const audioId = registerAudio(newAudio);
@@ -561,7 +562,7 @@ const InterviewPage: React.FC = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       
       // 音声エレメントを作成
-      const audio = new Audio(audioUrl);
+      const audio = createAudioWithVolume(audioUrl);
       
       // AudioStopperContextに登録
       const audioId = registerAudio(audio);
@@ -631,7 +632,7 @@ const InterviewPage: React.FC = () => {
       }
       
       // 新しい音声を再生
-      const audio = new Audio(audioUrl);
+      const audio = createAudioWithVolume(audioUrl);
       
       // AudioStopperContextに登録
       const audioId = registerAudio(audio);

@@ -127,8 +127,8 @@
     }
   },
   "audio": {
-    "permissionTitle": "Start Interview with Audio?",
-    "permissionMessage": "On smartphones, user interaction is required to play audio. Please press the button below.",
+    "permissionTitle": "English audio will be played",
+    "permissionMessage": "AI-generated audio will be played during the interview. Please check your volume.",
     "startWithAudio": "Start Interview"
   }
 }
