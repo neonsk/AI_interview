@@ -129,6 +129,6 @@
   "audio": {
     "permissionTitle": "Start Interview with Audio?",
     "permissionMessage": "On smartphones, user interaction is required to play audio. Please press the button below.",
-    "startWithAudio": "Start Interview with Audio"
+    "startWithAudio": "Start Interview"
   }
 }

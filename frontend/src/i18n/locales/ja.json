@@ -127,8 +127,8 @@
     }
   },
   "audio": {
-    "permissionTitle": "音声で面接を始めますか？",
-    "permissionMessage": "スマートフォンでは音声再生のためにユーザー操作が必要です。下のボタンを押してください。",
-    "startWithAudio": "音声で面接を始める"
+    "permissionTitle": "English audio will be played",
+    "permissionMessage": "AI-generated audio will be played during the interview. Please check your volume.",
+    "startWithAudio": "Start Interview"
   }
 }

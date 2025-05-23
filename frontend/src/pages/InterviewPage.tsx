@@ -264,73 +264,40 @@ const InterviewPage: React.FC = () => {
   }, [messages, pendingAudio]);
 
   // 面接の初期化処理
+  const initializeInterview = async () => {
+    // まず面接状態をリセットして開始
+    endInterview();
+    startInterview();
+    
+    // マイク許可を試みる
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 許可された場合はそのまま音声モードで続行
+    } catch (err) {
+      // マイク許可が得られなかった場合はキーボードモードに切り替え
+      logToFile('Microphone access denied', { error: err });
+      setIsKeyboardMode(true);
+      // ただし面接自体は中断しない
+    }
+    
+    // マイクの許可状況に関わらず、少し遅延してから最初の質問を表示
+    setTimeout(() => {
+      // 最初の質問を表示
+      displayNextQuestion(undefined, true)
+        .then(() => {
+          setIsAIQuestionReady(true);
+        });
+    }, 1000);
+  };
+
+  // useEffectでisAudioAllowedがtrueになったタイミングで初期化
   useEffect(() => {
-    let isComponentMounted = true; // コンポーネントのマウント状態を追跡
-    
-    // 面接の初期化処理
-    const initializeInterview = async () => {
-      // まず面接状態をリセットして開始
-      endInterview();
-      startInterview();
-      
-      // マイク許可を試みる
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        // 許可された場合はそのまま音声モードで続行
-      } catch (err) {
-        if (!isComponentMounted) return;
-        // マイク許可が得られなかった場合はキーボードモードに切り替え
-        logToFile('Microphone access denied', { error: err });
-        setIsKeyboardMode(true);
-        // ただし面接自体は中断しない
-      }
-      
-      if (!isComponentMounted) return;
-      
-      // マイクの許可状況に関わらず、少し遅延してから最初の質問を表示
-      setTimeout(() => {
-        if (!isComponentMounted) return;
-        
-        // 最初の質問を表示
-        displayNextQuestion(undefined, true)
-          .then(() => {
-            if (!isComponentMounted) return;
-            setIsAIQuestionReady(true);
-          });
-      }, 1000);
-    };
-    
-    // 初期化を実行
-    initializeInterview();
-    
-    return () => {
-      isComponentMounted = false;
-      
-      // 音声リソースのクリーンアップ
-      if (isPlaying) {
-        window.speechSynthesis.cancel();
-      }
-      
-      // 生成した音声のクリーンアップ
-      Object.values(audioElements).forEach(audio => {
-        audio.pause();
-        audio.src = '';
-      });
-      
-      // Blob URLのクリーンアップ
-      Object.keys(audioElements).forEach(key => {
-        if (audioElements[key].src.startsWith('blob:')) {
-          URL.revokeObjectURL(audioElements[key].src);
-        }
-      });
-      
-      // 状態をクリア
-      setAudioElements({});
-      
-      // 必要なクリーンアップ処理
-      endInterview();
-    };
-  }, []);
+    if (isAudioAllowed) {
+      initializeInterview();
+    }
+    // isAudioAllowedがfalse→trueになった時だけ初期化
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAudioAllowed]);
 
   // 面接時間のカウントダウン
   useEffect(() => {
