@@ -22,7 +22,6 @@ export const interviewConfig = {
 
 // フィードバック関連の設定
 export const feedbackConfig = {
-  // 無料ユーザーに表示する詳細フィードバックの質問数
-  // 環境変数がない場合はデフォルト値1を使用
-  freeDetailedFeedbackCount: Number(import.meta.env.VITE_FREE_DETAILED_FEEDBACK_COUNT || 2),
+  // 無料ユーザーに表示する詳細フィードバックの質問数（ここで直接設定）
+  freeDetailedFeedbackCount: 2,
 } as const;

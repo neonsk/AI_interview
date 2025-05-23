@@ -84,7 +84,7 @@ const PricingPage: React.FC = () => {
                   included={true}
                 />
                 <PricingItem 
-                  text={currentLang === 'ja' ? 'QAフィードバック1問分' : '1 Q&A feedback session'}
+                  text={currentLang === 'ja' ? 'QAフィードバック2問分' : '2 Q&A feedback session'}
                   included={true}
                 />
                 <PricingItem 

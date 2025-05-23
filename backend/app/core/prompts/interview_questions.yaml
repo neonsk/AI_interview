@@ -67,12 +67,14 @@ evaluation:
       }
     }
 
-    IMPORTANT: In the "summary" section, each field MUST contain at least 3 bullet points separated by line breaks (\n).
-    Each bullet point must start with sentence and be a complete sentence on a new line.
-    Do NOT combine points into a single paragraph.
+    IMPORTANT
+    - In the "summary" section, each field MUST contain at least 3 bullet points separated by line breaks (\n).
+    - Each bullet point must start with sentence and be a complete sentence on a new line.
+    - Do NOT combine points into a single paragraph.
+    - Rate each item strictly on a 5-point scale with 0.5 increments (e.g., 3.0, 3.5, 4.0).
+    - Provide a fair and objective evaluation based on the conversation content.
+    - Feedback in the “summary” section should be written in English and framed as advice to the user.
 
-    Rate each item strictly on a 5-point scale with 0.5 increments (e.g., 3.0, 3.5, 4.0).
-    Provide a fair and objective evaluation based on the conversation content.
   
   # 日本語版システムプロンプト
   system_ja: |
@@ -111,12 +113,13 @@ evaluation:
       }
     }
 
-    重要: "summary"セクションの各フィールドには、必ず改行（\n）で区切られた3つ以上の箇条書きを含めてください。
-    各箇条書きは文章で始まり、1行に1つの完全な文章を新しい行に記述してください。
-    複数のポイントを1つの段落にまとめないでください。
-
-    各評価項目は必ず0.5点刻みで5点満点で評価してください。例: 3.0, 3.5, 4.0など
-    評価は対話の内容に基づいて公平かつ客観的に行ってください。テキストフィードバックは必ず日本語で出力してください。
+    重要
+    - "summary"セクションの各フィールドには、必ず改行（\n）で区切られた3つ以上の箇条書きを含めてください。
+    - 各箇条書きは文章で始まり、1行に1つの完全な文章を新しい行に記述してください。
+    - 複数のポイントを1つの段落にまとめないでください。
+    - 各評価項目は必ず0.5点刻みで5点満点で評価してください。例: 3.0, 3.5, 4.0など
+    - 評価は対話の内容に基づいて公平かつ客観的に行ってください。テキストフィードバックは必ず日本語で出力してください。
+    - summaryのフィードバック内容はユーザーにアドバイスをするような表現にしてください。    
   
   # 英語版ユーザープロンプト
   user_prompt_en: "Please evaluate the following interview conversation. Make sure to respond using the specified JSON format with multiple reviews for the summary section."
