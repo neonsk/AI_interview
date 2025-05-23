@@ -53,12 +53,12 @@ services:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT}
       GOOGLE_CLOUD_SPEECH_REGION: ${GOOGLE_CLOUD_SPEECH_REGION}
 
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./nginx/certs:/etc/letsencrypt/live
-      - ./nginx/www:/var/www/certbot
-    environment:
-      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
-      - CERTBOT_DOMAIN=${CERTBOT_DOMAIN}
-    command: certonly --webroot --webroot-path=/var/www/certbot --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${CERTBOT_DOMAIN}
+  # certbot:
+  #   image: certbot/certbot
+  #   volumes:
+  #     - ./nginx/certs:/etc/letsencrypt/live
+  #     - ./nginx/www:/var/www/certbot
+  #   environment:
+  #     - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+  #     - CERTBOT_DOMAIN=${CERTBOT_DOMAIN}
+  #   command: certonly --webroot --webroot-path=/var/www/certbot --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${CERTBOT_DOMAIN}

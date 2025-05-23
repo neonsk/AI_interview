@@ -56,7 +56,7 @@ interface InterviewContextType {
   messages: Message[];
   isInterviewActive: boolean;
   feedback: FeedbackData | null;
-  addMessage: (message: Omit<Message, 'id'>) => void;
+  addMessage: (message: Omit<Message, 'id'> & { id?: string }) => string;
   clearMessages: () => void;
   startInterview: () => void;
   endInterview: () => void;
@@ -80,13 +80,14 @@ export const InterviewProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [feedback, setFeedbackState] = useState<FeedbackData | null>(null);
 
-  const addMessage = (message: Omit<Message, 'id'>) => {
+  const addMessage = (message: Omit<Message, 'id'> & { id?: string }): string => {
     const newMessage = {
       ...message,
-      id: Date.now().toString(),
+      id: message.id ?? Date.now().toString(),
       isTextVisible: message.role === 'user', // User messages are always visible
     };
     setMessages((prev) => [...prev, newMessage]);
+    return newMessage.id;
   };
 
   const clearMessages = () => {

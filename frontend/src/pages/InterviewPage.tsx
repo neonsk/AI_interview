@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { logToFile } from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { Mic, X, Square, Send, Keyboard, Play, Pause, Eye, EyeOff } from 'lucide-react';
-import { useInterview, FeedbackData } from '../context/InterviewContext';
+import { useInterview, FeedbackData, Message } from '../context/InterviewContext';
 import { useAudioStopper } from '../context/AudioStopperContext';
 import Button from '../components/Button';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -38,7 +38,7 @@ const InterviewPage: React.FC = () => {
   const [audioElements, setAudioElements] = useState<{[key: string]: HTMLAudioElement}>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAudioAllowed, setIsAudioAllowed] = useState(false);
-  const [pendingAutoPlayMessage, setPendingAutoPlayMessage] = useState<{text: string, id: string} | null>(null);
+  const [pendingAudio, setPendingAudio] = useState<{id: string, blob: Blob | null, text: string} | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRecorderRef = useRef<AudioRecorderHandle>(null);
@@ -159,83 +159,23 @@ const InterviewPage: React.FC = () => {
     }
   };
 
-  // 質問を生成して表示する統合関数
-  const displayNextQuestion = async (
-    messagesForApi: any[] | undefined = undefined,
-    isFirstQuestion: boolean = false, 
-    fallbackMessage: string = "Let me ask you another question about your experience."
-  ): Promise<boolean> => {
-    setIsLoading(true);
-    scrollToBottom();
-    setIsAudioLoading(true);
-    
-    try {
-      let aiMessage: string;
-      
-      if (isFirstQuestion) {
-        aiMessage = "Hello. Let's start the interview. At first, please introduce yourself.";
-      } else if (messagesForApi) {
-        // 明示的に指定されたメッセージリストを使用（ユーザーの最新メッセージが含まれる）
-        aiMessage = await generateQuestionWithMessages(messagesForApi);
-      } else {
-        // 現在のmessages状態を使用（初回質問や最新メッセージが不要なとき）
-        aiMessage = await generateQuestion();
-      }
-      
-      // メッセージを追加
-      addMessage({
-        role: 'assistant',
-        content: aiMessage,
-        isTextVisible: true,
-      });
-      
-      // メッセージ追加後に強制的にスクロール
-      setTimeout(() => {
-        scrollToBottom();
-      }, 50);
-      
-      scrollToBottom();
-      setIsLoading(false);
-      return true;
-    } catch (error) {
-      addMessage({
-        role: 'assistant',
-        content: fallbackMessage,
-        isTextVisible: true,
-      });
-      
-      // メッセージ追加後に強制的にスクロール
-      setTimeout(() => {
-        scrollToBottom();
-      }, 50);
-      
-      scrollToBottom();
-      setIsLoading(false);
-      return false;
-    }
-  };
-
-  // 音声を生成して保存・再生する関数
-  const generateAndPlayAudio = async (text: string, messageId: string) => {
-    try {
-      const audioBlob = await interviewApi.generateSpeech(text);
+  // 共通の音声再生関数
+  const playAudioBlob = (
+    audioBlob: Blob | null,
+    messageId: string,
+    text: string
+  ) => {
+    if (audioBlob) {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-      
-      // AudioStopperContextに登録
       const audioId = registerAudio(audio);
-      
-      // 音声を再生
       audio.onended = () => {
         setIsAudioLoading(false);
         setIsAnyAudioPlaying(false);
         setIsPlaying(null);
-        // 音声終了時に登録解除
         unregisterAudio(audioId);
-        // 音声再生終了時にスクロールを最下部に移動
         scrollToBottom();
       };
-      
       audio.onerror = (error) => {
         logToFile('Error playing generated audio', { error });
         setIsAudioLoading(false);
@@ -243,23 +183,11 @@ const InterviewPage: React.FC = () => {
         setIsPlaying(null);
         unregisterAudio(audioId);
       };
-      
-      // 音声を保存
-      setAudioElements(prev => ({
-        ...prev,
-        [messageId]: audio
-      }));
-      
-      // 自動再生
+      setAudioElements(prev => ({ ...prev, [messageId]: audio }));
       updatePlayingState(true, messageId);
       audio.play();
-    } catch (error) {
-      logToFile('Error generating speech', { error, messageId });
-      setIsAudioLoading(false);
-      setIsAnyAudioPlaying(false);
-      setIsPlaying(null);
-      
-      // フォールバック: ブラウザの音声合成APIを使用
+    } else {
+      // フォールバック: ブラウザの音声合成API
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = interviewConfig.synthesis.language;
       utterance.onend = () => {
@@ -271,34 +199,69 @@ const InterviewPage: React.FC = () => {
     }
   };
 
+  // 質問を生成して表示する統合関数
+  const displayNextQuestion = async (
+    messagesForApi: any[] | undefined = undefined,
+    isFirstQuestion: boolean = false, 
+    fallbackMessage: string = "Let me ask you another question about your experience."
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    scrollToBottom();
+    setIsAudioLoading(true);
+
+    try {
+      let aiMessage: string;
+      if (isFirstQuestion) {
+        aiMessage = "Hello. Let's start the interview. At first, please introduce yourself.";
+      } else if (messagesForApi) {
+        aiMessage = await generateQuestionWithMessages(messagesForApi);
+      } else {
+        aiMessage = await generateQuestion();
+      }
+
+      let audioBlob: Blob | null = null;
+      try {
+        audioBlob = await interviewApi.generateSpeech(aiMessage);
+      } catch (e) {
+        logToFile('Error generating speech (pre-addMessage)', { error: e });
+        // フォールバックはplayAudioBlob内で対応
+      }
+
+      const msgId: string = addMessage({
+        role: 'assistant',
+        content: aiMessage,
+        isTextVisible: true,
+        id: isFirstQuestion ? Date.now().toString() : undefined,
+      } as Omit<Message, 'id'> & { id?: string });
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+      scrollToBottom();
+      setIsLoading(false);
+      setPendingAudio({ id: msgId, blob: audioBlob, text: aiMessage });
+      return true;
+    } catch (error) {
+      addMessage({
+        role: 'assistant',
+        content: fallbackMessage,
+        isTextVisible: true,
+      } as Omit<Message, 'id'> & { id?: string });
+      setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+      scrollToBottom();
+      setIsLoading(false);
+      return false;
+    }
+  };
+
   // メッセージが追加されたときに音声を生成
   useEffect(() => {
-    if (!isAudioAllowed) {
-      // 許可前は自動再生せず、AIメッセージが来たらpendingに保存
-      if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-        const lastMessage = messages[messages.length - 1];
-        if (!audioElements[lastMessage.id]) {
-          setPendingAutoPlayMessage({ text: lastMessage.content, id: lastMessage.id });
-        }
-      }
-      return;
+    if (pendingAudio) {
+      playAudioBlob(pendingAudio.blob, pendingAudio.id, pendingAudio.text);
+      setPendingAudio(null);
     }
-    // 許可後は従来通り自動再生
-    if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-      const lastMessage = messages[messages.length - 1];
-      if (!audioElements[lastMessage.id]) {
-        generateAndPlayAudio(lastMessage.content, lastMessage.id);
-      }
-    }
-  }, [messages, audioElements, isAudioAllowed]);
-
-  // 許可後にpendingのメッセージがあれば再生
-  useEffect(() => {
-    if (isAudioAllowed && pendingAutoPlayMessage) {
-      generateAndPlayAudio(pendingAutoPlayMessage.text, pendingAutoPlayMessage.id);
-      setPendingAutoPlayMessage(null);
-    }
-  }, [isAudioAllowed, pendingAutoPlayMessage]);
+  }, [messages, pendingAudio]);
 
   // 面接の初期化処理
   useEffect(() => {
