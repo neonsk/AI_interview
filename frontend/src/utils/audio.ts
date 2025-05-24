@@ -2,6 +2,7 @@
 // デフォルト音量は0.2（0.0〜1.0）
 export function createAudioWithVolume(src: string, volume: number = 0.2): HTMLAudioElement {
   const audio = new Audio(src);
+  audio.preload = "auto"; // プリロードを有効化
   // iOS Safari判定
   const isIOSSafari =
     typeof window !== 'undefined' &&

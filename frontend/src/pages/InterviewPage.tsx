@@ -31,7 +31,6 @@ const InterviewPage: React.FC = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number>(interviewConfig.duration);
   const [showSpeakAgain, setShowSpeakAgain] = useState(false);
-  const [playingUserAudio, setPlayingUserAudio] = useState<string | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
