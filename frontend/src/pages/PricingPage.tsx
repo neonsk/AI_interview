@@ -80,20 +80,16 @@ const PricingPage: React.FC = () => {
                   included={true}
                 />
                 <PricingItem 
-                  text={currentLang === 'ja' ? '面接時間3分まで' : 'Up to 3 minutes interview'}
+                  text={currentLang === 'ja' ? '面接時間2分まで' : 'Up to 2 minutes interview'}
+                  included={true}
+                />
+                <PricingItem 
+                  text={currentLang === 'ja' ? '面接回数 無制限' : 'Unlimited interviews'}
                   included={true}
                 />
                 <PricingItem 
                   text={currentLang === 'ja' ? 'QAフィードバック2問分' : '2 Q&A feedback session'}
                   included={true}
-                />
-                <PricingItem 
-                  text={currentLang === 'ja' ? '過去QA履歴による質問精度向上' : 'Question improvement from history'}
-                  included={false}
-                />
-                <PricingItem 
-                  text={currentLang === 'ja' ? 'AIアバター面接' : 'AI avatar interview'}
-                  included={false}
                 />
               </ul>
             </div>
@@ -111,7 +107,7 @@ const PricingPage: React.FC = () => {
                 <span className="text-2xl font-bold text-gray-800">Lite</span>
               </div>
               <div className="flex items-end mb-2">
-                <span className="text-5xl font-bold text-gray-900">$9</span>
+                <span className="text-5xl font-bold text-gray-900">$8</span>
                 <span className="text-lg text-gray-700 ml-2">{currentLang === 'ja' ? '/月' : '/mo'}</span>
               </div>
               <div className="h-4 mb-2" />
@@ -121,7 +117,11 @@ const PricingPage: React.FC = () => {
                   included={true}
                 />
                 <PricingItem 
-                  text={currentLang === 'ja' ? '面接時間30分まで' : 'Up to 30 minutes interview'}
+                  text={currentLang === 'ja' ? '面接時間15分まで' : 'Up to 15 minutes interview'}
+                  included={true}
+                />
+                <PricingItem 
+                  text={currentLang === 'ja' ? '面接回数 月8回まで' : 'Up to 8 interviews per month'}
                   included={true}
                 />
                 <PricingItem 
@@ -131,10 +131,6 @@ const PricingPage: React.FC = () => {
                 <PricingItem 
                   text={currentLang === 'ja' ? '過去QA履歴による質問精度向上' : 'Question improvement from history'}
                   included={true}
-                />
-                <PricingItem 
-                  text={currentLang === 'ja' ? 'AIアバター面接' : 'AI avatar interview'}
-                  included={false}
                 />
                 <p className="text-gray-500">
                   <span className="w-2 inline-block"></span>
@@ -165,7 +161,7 @@ const PricingPage: React.FC = () => {
                 <span className="text-2xl font-bold text-gray-800">Pro</span>
               </div>
               <div className="flex items-end mb-2">
-                <span className="text-5xl font-bold text-gray-900">$19</span>
+                <span className="text-5xl font-bold text-gray-900">$18</span>
                 <span className="text-lg text-gray-700 ml-2">{currentLang === 'ja' ? '/月' : '/mo'}</span>
               </div>
               <div className="h-4 mb-2" />
@@ -179,15 +175,15 @@ const PricingPage: React.FC = () => {
                   included={true}
                 />
                 <PricingItem 
+                  text={currentLang === 'ja' ? '面接回数 無制限' : 'Unlimited interviews'}
+                  included={true}
+                />
+                <PricingItem 
                   text={currentLang === 'ja' ? 'QAフィードバック無制限' : 'Unlimited Q&A feedback'}
                   included={true}
                 />
                 <PricingItem 
                   text={currentLang === 'ja' ? '過去QA履歴による質問精度向上' : 'Question improvement from history'}
-                  included={true}
-                />
-                <PricingItem 
-                  text={currentLang === 'ja' ? 'AIアバター面接' : 'AI avatar interview'}
                   included={true}
                 />
                 <p className="text-gray-500">

@@ -1,6 +1,6 @@
 export const interviewConfig = {
   // インタビュー時間（秒）
-  duration: 180,
+  duration: 120,
 
   // 音声認識の設定
   speech: {

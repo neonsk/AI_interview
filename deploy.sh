@@ -29,8 +29,12 @@ case "$ACTION" in
         echo "📄 Showing logs..."
         ENV=${2:-development} docker-compose logs -f
         ;;
+    reset-resources)
+        echo "🔄 Resetting resources..."
+        docker system prune -af --volumes
+        ;;
     *)
-        echo "Usage: $0 {up|down|logs} [environment]"
+        echo "Usage: $0 {up|down|logs|reset-resources} [environment]"
         exit 1
         ;;
 esac

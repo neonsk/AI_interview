@@ -603,70 +603,6 @@ const InterviewPage: React.FC = () => {
     }
   };
 
-  const handleUserAudioPlayback = (messageId: string, audioUrl?: string) => {
-    if (!audioUrl) return;
-    
-    // 何らかの音声が再生中で、現在のメッセージの音声でない場合、または録音中の場合は処理をキャンセル
-    if ((isAnyAudioPlaying && playingUserAudio !== messageId) || isRecording) {
-      logToFile('Cannot play user audio: already playing or recording', { isAnyAudioPlaying, playingUserAudio, isRecording });
-      return;
-    }
-    
-    if (playingUserAudio === messageId) {
-      // 再生中の音声を停止
-      const audioElements = document.getElementsByTagName('audio');
-      for (let audio of audioElements) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-      setPlayingUserAudio(null);
-      setIsAnyAudioPlaying(false);
-    } else {
-      // 他に再生中の音声があれば停止
-      if (playingUserAudio) {
-        const audioElements = document.getElementsByTagName('audio');
-        for (let audio of audioElements) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      }
-      
-      // 新しい音声を再生
-      const audio = createAudioWithVolume(audioUrl);
-      
-      // AudioStopperContextに登録
-      const audioId = registerAudio(audio);
-      
-      // 再生完了時のイベントリスナーを設定
-      audio.onended = () => {
-        setPlayingUserAudio(null);
-        setIsAnyAudioPlaying(false);
-        unregisterAudio(audioId);
-        // 音声再生完了時にスクロールを最下部に移動
-        scrollToBottom();
-      };
-      
-      // エラー発生時のイベントリスナーを設定
-      audio.onerror = (error) => {
-        logToFile('Error playing user audio', { error, messageId });
-        setPlayingUserAudio(null);
-        setIsAnyAudioPlaying(false);
-        unregisterAudio(audioId);
-      };
-      
-      // 再生
-      audio.play().catch(error => {
-        logToFile('Error playing user audio', { error, messageId });
-        setPlayingUserAudio(null);
-        setIsAnyAudioPlaying(false);
-        unregisterAudio(audioId);
-      });
-      
-      setPlayingUserAudio(messageId);
-      setIsAnyAudioPlaying(true);
-    }
-  };
-
   useEffect(() => {
     logToFile('page_view', { page: 'InterviewPage' });
   }, []);
@@ -756,24 +692,6 @@ const InterviewPage: React.FC = () => {
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
                     </p>
-                    {message.audioUrl && (
-                      <div className="flex items-center gap-2 mt-1 text-blue-100">
-                        <button
-                          onClick={() => handleUserAudioPlayback(message.id, message.audioUrl)}
-                          className={`p-1 hover:bg-blue-500 rounded-full transition-colors ${
-                            (isAnyAudioPlaying && playingUserAudio !== message.id) || isRecording ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          aria-label={playingUserAudio === message.id ? "停止" : "録音を再生"}
-                          disabled={(isAnyAudioPlaying && playingUserAudio !== message.id) || isRecording}
-                        >
-                          {playingUserAudio === message.id ? (
-                            <Pause size={14} />
-                          ) : (
-                            <Play size={14} className={isAnyAudioPlaying || isRecording ? 'opacity-50' : ''} />
-                          )}
-                        </button>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
