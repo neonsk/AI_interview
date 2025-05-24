@@ -38,8 +38,8 @@
       "end": "End Interview"
     },
     "complete": {
-      "title": "Interview Complete",
-      "message": "Your interview session is complete. Would you like to view your feedback?"
+      "title": "Interview Finished",
+      "message": "Thank you for your time! The interview session is now over. Would you like to review the feedback?"
     }
   },
   "feedback": {
